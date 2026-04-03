@@ -10,10 +10,9 @@ interface AddCategoryModalProps {
   open: boolean;
   onClose: () => void;
   onAdd: (name: string) => void;
-  darkMode: boolean;
 }
 
-const AddCategoryModal: React.FC<AddCategoryModalProps> = ({ open, onClose, onAdd, darkMode }) => {
+const AddCategoryModal: React.FC<AddCategoryModalProps> = ({ open, onClose, onAdd }) => {
   const [name, setName] = useState('');
 
   if (!open) return null;
@@ -27,13 +26,13 @@ const AddCategoryModal: React.FC<AddCategoryModalProps> = ({ open, onClose, onAd
 
   return (
     <Box sx={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 90, pointerEvents: 'none' }}>
-      <Box sx={{ pointerEvents: 'auto', borderRadius: 2, boxShadow: 6, p: 3, maxWidth: 480, width: '100%', mx: 2, backgroundColor: darkMode ? '#111827' : '#ffffff', color: darkMode ? '#e5e7eb' : '#111827' }}>
+      <Box sx={{ pointerEvents: 'auto', borderRadius: 2, boxShadow: 6, p: 3, maxWidth: 480, width: '100%', mx: 2, backgroundColor: 'background.paper', color: 'text.primary' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>Add Category</Typography>
-          <IconButton onClick={onClose}><X size={24} style={{ color: darkMode ? '#c7c7c7' : '#374151' }} /></IconButton>
+          <IconButton onClick={onClose}><X size={24} /></IconButton>
         </Box>
         <Box>
-          <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 1, color: darkMode ? '#e5e7eb' : '#374151' }}>Category Name</Typography>
+          <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 1, color: 'text.secondary' }}>Category Name</Typography>
           <TextField value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Cardio" fullWidth />
         </Box>
         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>

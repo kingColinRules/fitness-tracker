@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Settings, Award, Save } from 'lucide-react';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
@@ -10,6 +10,8 @@ import Typography from '@mui/material/Typography';
 import MuiTooltip from '@mui/material/Tooltip';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
+import CssBaseline from '@mui/material/CssBaseline';
+import { ThemeProvider } from '@mui/material/styles';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
@@ -17,6 +19,7 @@ import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import dayjs, { Dayjs } from 'dayjs';
+import { createAppTheme } from './theme';
 
 import { generateDates, generateWeekDates, startOfWeek, formatDateKey, formatRange } from './utils/dateUtils';
 import { getStoredHandle, storeHandle, generateExportJSON } from './utils/fileSystem';
@@ -44,28 +47,70 @@ const ExerciseTracker = () => {
   const [showBadges, setShowBadges] = useState(false);
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
-  const [hasUnsavedExport, setHasUnsavedExport] = useState(false);
+  const [hasUnsavedExport, setHasUnsavedExport] = useState<boolean>(() => {
+    try {
+      const lastExport = localStorage.getItem('lastExportDate');
+      const lastChange = localStorage.getItem('lastChangeDate');
+      if (!lastExport) return false;
+      if (lastChange) return new Date(lastChange) > new Date(lastExport);
+    } catch { /* ignore */ }
+    return false;
+  });
+  const [savedFileName, setSavedFileName] = useState<string | null>(null);
   const [importFeedback, setImportFeedback] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'warning' | 'info' }>({ open: false, message: '', severity: 'success' });
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  const [goalSettings, setGoalSettings] = useState<Record<string, { enabled: boolean; required: number }>>({
-    weight: { enabled: true, required: 3 },
-    isometric: { enabled: true, required: 2 },
-    stretch: { enabled: true, required: 2 },
+  const [goalSettings, setGoalSettings] = useState<Record<string, { enabled: boolean; required: number }>>(() => {
+    try {
+      const s = localStorage.getItem('exerciseSettings');
+      if (s) return JSON.parse(s).goalSettings ?? { weight: { enabled: true, required: 3 }, isometric: { enabled: true, required: 2 }, stretch: { enabled: true, required: 2 } };
+    } catch { /* ignore */ }
+    return { weight: { enabled: true, required: 3 }, isometric: { enabled: true, required: 2 }, stretch: { enabled: true, required: 2 } };
   });
-  const [darkMode, setDarkMode] = useState(false);
-  const [compactView, setCompactView] = useState(false);
-  const [defaultChartMode, setDefaultChartMode] = useState<'weekly' | 'monthly'>('weekly');
+  const [darkMode, setDarkMode] = useState<boolean>(() => {
+    try {
+      const s = localStorage.getItem('exerciseSettings');
+      if (s) return JSON.parse(s).darkMode ?? false;
+    } catch { /* ignore */ }
+    return false;
+  });
+  const theme = useMemo(() => createAppTheme(darkMode ? 'dark' : 'light'), [darkMode]);
+  const [compactView, setCompactView] = useState<boolean>(() => {
+    try {
+      const s = localStorage.getItem('exerciseSettings');
+      if (s) return JSON.parse(s).compactView ?? false;
+    } catch { /* ignore */ }
+    return false;
+  });
+  const [defaultChartMode, setDefaultChartMode] = useState<'weekly' | 'monthly'>(() => {
+    try {
+      const s = localStorage.getItem('exerciseSettings');
+      if (s) return JSON.parse(s).defaultChartMode ?? 'weekly';
+    } catch { /* ignore */ }
+    return 'weekly';
+  });
   const [weekStartDay, setWeekStartDay] = useState<number>(() => {
     try {
       const s = localStorage.getItem('exerciseSettings');
       if (s) return JSON.parse(s).weekStartDay ?? 1;
-    } catch {}
+    } catch { /* ignore */ }
     return 1;
   });
 
-  const [exercises, setExercises] = useState<Record<string, string[]>>(DEFAULT_EXERCISES);
-  const [completions, setCompletions] = useState<Record<string, boolean>>({});
+  const [exercises, setExercises] = useState<Record<string, string[]>>(() => {
+    try {
+      const s = localStorage.getItem('exerciseList');
+      if (s) return JSON.parse(s);
+    } catch { /* ignore */ }
+    return DEFAULT_EXERCISES;
+  });
+  const [completions, setCompletions] = useState<Record<string, boolean>>(() => {
+    try {
+      const s = localStorage.getItem('exerciseCompletions');
+      if (s) return JSON.parse(s);
+    } catch { /* ignore */ }
+    return {};
+  });
 
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const exerciseHeaderRef = useRef<HTMLTableCellElement>(null);
@@ -77,33 +122,22 @@ const ExerciseTracker = () => {
     try {
       const s = localStorage.getItem('exerciseSettings');
       if (s) return JSON.parse(s).defaultChartMode || 'weekly';
-    } catch {}
+    } catch { /* ignore */ }
     return 'weekly';
   });
   const [weekStartDate, setWeekStartDate] = useState<Date>(() => startOfWeek(new Date(), weekStartDay));
   const [selectedDateValue, setSelectedDateValue] = useState<Dayjs | null>(dayjs(new Date()));
 
-  // Load persisted data
-  useEffect(() => {
-    try {
-      const savedCompletions = localStorage.getItem('exerciseCompletions');
-      const savedExercises = localStorage.getItem('exerciseList');
-      const savedSettings = localStorage.getItem('exerciseSettings');
-
-      if (savedCompletions) setCompletions(JSON.parse(savedCompletions));
-      if (savedExercises) setExercises(JSON.parse(savedExercises));
-      if (savedSettings) {
-        const settings = JSON.parse(savedSettings);
-        setDarkMode(settings.darkMode || false);
-        setCompactView(settings.compactView || false);
-        setGoalSettings(prev => settings.goalSettings || prev);
-        setDefaultChartMode(settings.defaultChartMode || 'weekly');
-        setWeekStartDay(settings.weekStartDay ?? 1);
-      }
-    } catch (e) {
-      console.error('Failed to load:', e);
+  const scrollToTodayImmediate = () => {
+    const todayStr = formatDateKey(new Date());
+    const container = tableWrapperRef.current;
+    if (!container) return;
+    const el = container.querySelector(`th[data-date="${todayStr}"]`) as HTMLElement | null;
+    if (el) {
+      const offset = el.offsetLeft - (container.clientWidth / 2) + (el.clientWidth / 2);
+      container.scrollTo({ left: Math.max(0, offset), behavior: 'smooth' });
     }
-  }, []);
+  };
 
   // Scroll to today when month/year/compactView changes
   useEffect(() => {
@@ -114,21 +148,17 @@ const ExerciseTracker = () => {
   // Measure sticky exercise column width
   useEffect(() => {
     const measure = () => {
-      try {
-        const el = exerciseHeaderRef.current as HTMLElement | null;
-        if (el) setStreakLeft(el.offsetWidth);
-      } catch {}
+      const el = exerciseHeaderRef.current;
+      if (el) setStreakLeft(el.offsetWidth);
     };
     measure();
     window.addEventListener('resize', measure);
-    let ro: ResizeObserver | null = null;
-    if (exerciseHeaderRef.current && (window as any).ResizeObserver) {
-      ro = new ResizeObserver(measure);
-      ro.observe(exerciseHeaderRef.current);
-    }
+    const el = exerciseHeaderRef.current;
+    const ro = el ? new ResizeObserver(measure) : null;
+    ro?.observe(el!);
     return () => {
       window.removeEventListener('resize', measure);
-      if (ro && exerciseHeaderRef.current) ro.unobserve(exerciseHeaderRef.current);
+      ro?.disconnect();
     };
   }, [compactView, selectedMonth, selectedYear]);
 
@@ -137,13 +167,6 @@ const ExerciseTracker = () => {
     try {
       localStorage.setItem('exerciseCompletions', JSON.stringify(completions));
       localStorage.setItem('lastChangeDate', new Date().toISOString());
-      const lastExport = localStorage.getItem('lastExportDate');
-      if (lastExport) {
-        const lastChange = new Date(localStorage.getItem('lastChangeDate')!);
-        setHasUnsavedExport(lastChange > new Date(lastExport));
-      } else {
-        setHasUnsavedExport(true);
-      }
     } catch (e) {
       console.error('Storage error:', e);
     }
@@ -167,10 +190,10 @@ const ExerciseTracker = () => {
     }
   }, [darkMode, compactView, goalSettings, defaultChartMode, weekStartDay]);
 
-  // Re-anchor week when weekStartDay changes
-  useEffect(() => {
-    setWeekStartDate(prev => startOfWeek(prev, weekStartDay));
-  }, [weekStartDay]);
+  const handleWeekStartDayChange = (day: number) => {
+    setWeekStartDay(day);
+    setWeekStartDate(prev => startOfWeek(prev, day));
+  };
 
   const dates = generateDates(selectedYear, selectedMonth);
   const tableDates = chartMode === 'weekly' ? generateWeekDates(weekStartDate) : dates;
@@ -205,34 +228,20 @@ const ExerciseTracker = () => {
   };
 
   const scrollToDate = (date: Date) => {
-    try {
-      const dateStr = formatDateKey(date);
-      const container = tableWrapperRef.current;
-      if (!container) return;
-      const el = container.querySelector(`th[data-date="${dateStr}"]`) as HTMLElement | null;
-      if (el) {
-        const offset = el.offsetLeft - (container.clientWidth / 2) + (el.clientWidth / 2);
-        container.scrollTo({ left: Math.max(0, offset), behavior: 'smooth' });
-      }
-    } catch {}
-  };
-
-  const scrollToTodayImmediate = () => {
-    try {
-      const todayStr = formatDateKey(new Date());
-      const container = tableWrapperRef.current;
-      if (!container) return;
-      const el = container.querySelector(`th[data-date="${todayStr}"]`) as HTMLElement | null;
-      if (el) {
-        const offset = el.offsetLeft - (container.clientWidth / 2) + (el.clientWidth / 2);
-        container.scrollTo({ left: Math.max(0, offset), behavior: 'smooth' });
-      }
-    } catch {}
+    const dateStr = formatDateKey(date);
+    const container = tableWrapperRef.current;
+    if (!container) return;
+    const el = container.querySelector(`th[data-date="${dateStr}"]`) as HTMLElement | null;
+    if (el) {
+      const offset = el.offsetLeft - (container.clientWidth / 2) + (el.clientWidth / 2);
+      container.scrollTo({ left: Math.max(0, offset), behavior: 'smooth' });
+    }
   };
 
   const toggleCompletion = (category: string, exercise: string, dateStr: string) => {
     const key = `${category}-${exercise}-${dateStr}`;
     setCompletions(prev => ({ ...prev, [key]: !prev[key] }));
+    setHasUnsavedExport(true);
   };
 
   const writeJSON = async (handle: FileSystemFileHandle) => {
@@ -246,7 +255,7 @@ const ExerciseTracker = () => {
 
   const exportToJSON = async () => {
     const json = generateExportJSON(exercises, completions, goalSettings);
-    if (!(window as any).showSaveFilePicker) {
+    if (!('showSaveFilePicker' in window)) {
       const blob = new Blob([json], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -259,26 +268,28 @@ const ExerciseTracker = () => {
       return;
     }
     try {
-      const handle = await (window as any).showSaveFilePicker({
+      const handle = await (window as Window & { showSaveFilePicker: (opts: unknown) => Promise<FileSystemFileHandle> }).showSaveFilePicker({
         suggestedName: 'exercise-tracker.json',
         types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
       });
       fileHandleRef.current = handle;
+      setSavedFileName(handle.name);
       await storeHandle(handle);
       await writeJSON(handle);
-    } catch {}
+    } catch { /* user cancelled */ }
   };
 
   const saveToFile = async () => {
     if (fileHandleRef.current) {
-      const perm = await (fileHandleRef.current as any).queryPermission({ mode: 'readwrite' });
+      const perm = await (fileHandleRef.current as FileSystemFileHandle & { queryPermission: (opts: object) => Promise<string> }).queryPermission({ mode: 'readwrite' });
       if (perm === 'granted') { await writeJSON(fileHandleRef.current); return; }
     }
     const stored = await getStoredHandle();
     if (stored) {
-      const perm = await (stored as any).requestPermission({ mode: 'readwrite' });
+      const perm = await (stored as FileSystemFileHandle & { requestPermission: (opts: object) => Promise<string> }).requestPermission({ mode: 'readwrite' });
       if (perm === 'granted') {
         fileHandleRef.current = stored;
+        setSavedFileName(stored.name);
         await writeJSON(stored);
         return;
       }
@@ -295,23 +306,32 @@ const ExerciseTracker = () => {
     reader.onload = (e) => {
       const result = e.target?.result;
       if (typeof result !== 'string') return;
-      let parsed: any;
+      let parsed: unknown;
       try {
         parsed = JSON.parse(result);
       } catch {
         setImportFeedback({ open: true, message: 'Invalid JSON file.', severity: 'error' });
         return;
       }
-      if (!parsed.version || !parsed.exercises || !parsed.completions) {
+      if (
+        typeof parsed !== 'object' || parsed === null ||
+        !('version' in parsed) || !('exercises' in parsed) || !('completions' in parsed)
+      ) {
         setImportFeedback({ open: true, message: 'Unrecognised file format — missing required fields.', severity: 'error' });
         return;
       }
-      setExercises(parsed.exercises);
-      setCompletions(parsed.completions);
-      if (parsed.goalSettings) setGoalSettings(parsed.goalSettings);
+      const data = parsed as {
+        exercises: Record<string, string[]>;
+        completions: Record<string, boolean>;
+        goalSettings?: Record<string, { enabled: boolean; required: number }>;
+      };
+      setExercises(data.exercises);
+      setCompletions(data.completions);
+      if (data.goalSettings) setGoalSettings(data.goalSettings);
+      setHasUnsavedExport(true);
       setImportFeedback({
         open: true,
-        message: `Imported ${Object.keys(parsed.completions).length} completions across ${Object.keys(parsed.exercises).length} categories`,
+        message: `Imported ${Object.keys(data.completions).length} completions across ${Object.keys(data.exercises).length} categories`,
         severity: 'success',
       });
     };
@@ -332,11 +352,11 @@ const ExerciseTracker = () => {
     setShowAddExercise(false);
   };
 
-  const containerBg = darkMode ? 'rgba(17,24,39,1)' : 'rgba(249,250,251,1)';
-
   return (
-    <Box sx={{ width: '100%', minHeight: '100vh', overflow: 'auto', backgroundColor: containerBg }}>
-      <AppBar position="static" elevation={2} sx={{ background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)', color: '#ffffff' }}>
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+    <Box sx={{ width: '100%', minHeight: '100vh', overflow: 'auto', backgroundColor: 'background.default' }}>
+      <AppBar position="static" elevation={2}>
         <Toolbar disableGutters sx={{ px: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 1200, mx: 'auto' }}>
             <Typography variant="h4" sx={{ fontWeight: 700 }}>Fitness Tracker</Typography>
@@ -418,7 +438,6 @@ const ExerciseTracker = () => {
               tableDates={tableDates}
               chartMode={chartMode}
               compactView={compactView}
-              darkMode={darkMode}
               streakLeft={streakLeft}
               weekStartDay={weekStartDay}
               tableWrapperRef={tableWrapperRef}
@@ -433,7 +452,6 @@ const ExerciseTracker = () => {
               selectedMonth={selectedMonth}
               selectedYear={selectedYear}
               weekStartDay={weekStartDay}
-              darkMode={darkMode}
               exercises={exercises}
               completions={completions}
             />
@@ -443,7 +461,6 @@ const ExerciseTracker = () => {
             <ChartView
               exercises={exercises}
               completions={completions}
-              darkMode={darkMode}
               chartMode={chartMode}
               weekStartDate={weekStartDate}
               dates={dates}
@@ -464,7 +481,7 @@ const ExerciseTracker = () => {
         defaultChartMode={defaultChartMode}
         setDefaultChartMode={setDefaultChartMode}
         weekStartDay={weekStartDay}
-        setWeekStartDay={setWeekStartDay}
+        setWeekStartDay={handleWeekStartDayChange}
         setChartMode={setChartMode}
         exercises={exercises}
         setExercises={setExercises}
@@ -475,7 +492,7 @@ const ExerciseTracker = () => {
         onOpenAddCategory={() => setShowAddCategory(true)}
         onOpenAddExercise={() => setShowAddExercise(true)}
         hasUnsavedExport={hasUnsavedExport}
-        fileHandleRef={fileHandleRef}
+        savedFileName={savedFileName}
         exportToJSON={exportToJSON}
         importFromJSON={importFromJSON}
       />
@@ -485,7 +502,6 @@ const ExerciseTracker = () => {
         open={showAddCategory}
         onClose={() => setShowAddCategory(false)}
         onAdd={addCategory}
-        darkMode={darkMode}
       />
 
       <AddExerciseModal
@@ -494,13 +510,11 @@ const ExerciseTracker = () => {
         onClose={() => setShowAddExercise(false)}
         onAdd={addExercise}
         exercises={exercises}
-        darkMode={darkMode}
       />
 
       <StatsModal
         open={showStats}
         onClose={() => setShowStats(false)}
-        darkMode={darkMode}
         exercises={exercises}
         completions={completions}
         dates={dates}
@@ -509,7 +523,6 @@ const ExerciseTracker = () => {
       <BadgesModal
         open={showBadges}
         onClose={() => setShowBadges(false)}
-        darkMode={darkMode}
         exercises={exercises}
         completions={completions}
         dates={dates}
@@ -526,6 +539,7 @@ const ExerciseTracker = () => {
         </Alert>
       </Snackbar>
     </Box>
+    </ThemeProvider>
   );
 };
 

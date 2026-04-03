@@ -11,10 +11,9 @@ interface AddExerciseModalProps {
   onClose: () => void;
   onAdd: (name: string, category: string) => void;
   exercises: Record<string, string[]>;
-  darkMode: boolean;
 }
 
-const AddExerciseModal: React.FC<AddExerciseModalProps> = ({ open, onClose, onAdd, exercises, darkMode }) => {
+const AddExerciseModal: React.FC<AddExerciseModalProps> = ({ open, onClose, onAdd, exercises }) => {
   const categories = Object.keys(exercises);
   const [name, setName] = useState('');
   const [category, setCategory] = useState(categories[0] || '');
@@ -30,10 +29,10 @@ const AddExerciseModal: React.FC<AddExerciseModalProps> = ({ open, onClose, onAd
 
   return (
     <Box sx={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 90, pointerEvents: 'none' }}>
-      <Box sx={{ pointerEvents: 'auto', borderRadius: 2, boxShadow: 6, p: 3, maxWidth: 480, width: '100%', mx: 2, backgroundColor: darkMode ? '#0f172a' : '#ffffff', color: darkMode ? '#e5e7eb' : '#111827' }}>
+      <Box sx={{ pointerEvents: 'auto', borderRadius: 2, boxShadow: 6, p: 3, maxWidth: 480, width: '100%', mx: 2, backgroundColor: 'background.paper', color: 'text.primary' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>Add Exercise</Typography>
-          <IconButton onClick={onClose}><X size={24} style={{ color: darkMode ? '#c7c7c7' : '#374151' }} /></IconButton>
+          <IconButton onClick={onClose}><X size={24} /></IconButton>
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Box>

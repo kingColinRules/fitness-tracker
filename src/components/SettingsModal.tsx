@@ -7,6 +7,7 @@ import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import { useTheme } from '@mui/material/styles';
 import { getLastExportInfo } from '../utils/fileSystem';
 
 const DEFAULT_EXERCISES = {
@@ -36,7 +37,7 @@ interface SettingsModalProps {
   onOpenAddCategory: () => void;
   onOpenAddExercise: () => void;
   hasUnsavedExport: boolean;
-  fileHandleRef: React.MutableRefObject<any>;
+  savedFileName: string | null;
   exportToJSON: () => Promise<void>;
   importFromJSON: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
@@ -47,7 +48,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   weekStartDay, setWeekStartDay, setChartMode,
   exercises, setExercises, completions, setCompletions, goalSettings, setGoalSettings,
   onOpenAddCategory, onOpenAddExercise,
-  fileHandleRef, exportToJSON, importFromJSON,
+  savedFileName, exportToJSON, importFromJSON,
 }) => {
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
@@ -55,6 +56,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [editExerciseName, setEditExerciseName] = useState('');
   const [draggedItem, setDraggedItem] = useState<{ category: string; index: number } | null>(null);
   const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
+  const theme = useTheme();
 
   if (!open) return null;
 
@@ -228,42 +230,40 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <Box sx={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 90, pointerEvents: 'none' }}>
-      <Box sx={{ pointerEvents: 'auto', borderRadius: 2, boxShadow: 6, width: '100%', maxWidth: 960, mx: 2, display: 'flex', flexDirection: 'column', backgroundColor: darkMode ? '#1f2937' : '#ffffff', color: darkMode ? '#e5e7eb' : '#111827', maxHeight: '90vh' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 3, borderBottom: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, flexShrink: 0 }}>
-          <Typography variant="h5" sx={{ fontWeight: 700, color: darkMode ? '#ffffff' : '#1f2937' }}>Settings</Typography>
-          <IconButton onClick={onClose} sx={{ p: 1 }}>
-            <X size={24} style={{ color: darkMode ? '#d1d5db' : '#4b5563' }} />
-          </IconButton>
+      <Box sx={{ pointerEvents: 'auto', borderRadius: 2, boxShadow: 6, width: '100%', maxWidth: 960, mx: 2, display: 'flex', flexDirection: 'column', backgroundColor: 'background.paper', color: 'text.primary', maxHeight: '90vh' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 3, borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
+          <Typography variant="h5" sx={{ fontWeight: 700 }}>Settings</Typography>
+          <IconButton onClick={onClose} sx={{ p: 1 }}><X size={24} /></IconButton>
         </Box>
         <Box sx={{ overflowY: 'auto', p: 3, flex: 1 }}>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
             {/* Appearance */}
             <div>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: darkMode ? '#e5e7eb' : '#374151' }}>Appearance</Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Appearance</Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
-                <Typography sx={{ color: darkMode ? '#e5e7eb' : '#374151', fontWeight: 600 }}>Theme</Typography>
+                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Theme</Typography>
                 <ToggleButtonGroup color="primary" value={darkMode ? 'dark' : 'light'} exclusive onChange={(_e, val) => { if (val) setDarkMode(val === 'dark'); }} size="small">
                   <ToggleButton value="light">Light Mode</ToggleButton>
                   <ToggleButton value="dark">Dark Mode</ToggleButton>
                 </ToggleButtonGroup>
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1, mt: 1 }}>
-                <Typography sx={{ color: darkMode ? '#e5e7eb' : '#374151', fontWeight: 600 }}>Density</Typography>
+                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Density</Typography>
                 <ToggleButtonGroup color="primary" value={compactView ? 'compact' : 'normal'} exclusive onChange={(_e, val) => { if (val) setCompactView(val === 'compact'); }} size="small">
                   <ToggleButton value="normal">Normal</ToggleButton>
                   <ToggleButton value="compact">Compact</ToggleButton>
                 </ToggleButtonGroup>
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1, mt: 1 }}>
-                <Typography sx={{ color: darkMode ? '#e5e7eb' : '#374151', fontWeight: 600 }}>Default Calendar View</Typography>
+                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Default Calendar View</Typography>
                 <ToggleButtonGroup color="primary" value={defaultChartMode} exclusive onChange={(_e, val) => { if (val) { setDefaultChartMode(val); setChartMode(val); } }} size="small">
                   <ToggleButton value="weekly">Week</ToggleButton>
                   <ToggleButton value="monthly">Month</ToggleButton>
                 </ToggleButtonGroup>
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1, mt: 1 }}>
-                <Typography sx={{ color: darkMode ? '#e5e7eb' : '#374151', fontWeight: 600 }}>Week Starts On</Typography>
+                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Week Starts On</Typography>
                 <ToggleButtonGroup color="primary" value={weekStartDay} exclusive onChange={(_e, val) => { if (val !== null) setWeekStartDay(val); }} size="small">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((label, i) => (
                     <ToggleButton key={i} value={i}>{label}</ToggleButton>
@@ -274,16 +274,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Data & Backup */}
             <div>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: darkMode ? '#e5e7eb' : '#374151' }}>Data & Backup</Typography>
-              <Box sx={{ p: 1.5, borderRadius: 1, mb: 1, backgroundColor: darkMode ? '#374151' : '#f8fafc' }}>
-                <Typography variant="body2" sx={{ color: darkMode ? '#d1d5db' : '#4b5563' }}><strong>Last export:</strong> {getLastExportInfo()}</Typography>
-                <Typography variant="body2" sx={{ color: darkMode ? '#d1d5db' : '#4b5563', mt: 0.5 }}>
-                  <strong>Save file:</strong> {fileHandleRef.current ? fileHandleRef.current.name : 'Not set — click Export to choose'}
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Data & Backup</Typography>
+              <Box sx={{ p: 1.5, borderRadius: 1, mb: 1, backgroundColor: 'action.hover' }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}><strong>Last export:</strong> {getLastExportInfo()}</Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                  <strong>Save file:</strong> {savedFileName ?? 'Not set — click Export to choose'}
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                 <Button onClick={exportToJSON} variant="contained" color="success" startIcon={<Download size={18} />}>Export</Button>
-                <Button component="label" variant="contained" sx={{ backgroundColor: '#7c3aed', '&:hover': { backgroundColor: '#6d28d9' } }} startIcon={<Upload size={18} />}>
+                <Button component="label" variant="contained" color="secondary" startIcon={<Upload size={18} />}>
                   Import
                   <input type="file" accept=".json" onChange={importFromJSON} hidden />
                 </Button>
@@ -293,12 +293,12 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Manage Categories */}
             <div>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: darkMode ? '#e5e7eb' : '#374151' }}>Manage Categories</Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Manage Categories</Typography>
               <Button onClick={onOpenAddCategory} variant="contained" startIcon={<Plus size={18} />} sx={{ mb: 1 }}>Add Category</Button>
               <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {Object.keys(exercises).map(category => (
-                  <Box key={category} draggable onDragStart={(e) => handleCategoryDragStart(e, category)} onDragOver={handleCategoryDragOver} onDrop={(e) => handleCategoryDrop(e, category)} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, backgroundColor: darkMode ? '#0f172a' : '#ffffff', cursor: 'grab' }}>
-                    <GripVertical style={{ color: darkMode ? '#6b7280' : '#9ca3af', flexShrink: 0 }} size={16} />
+                  <Box key={category} draggable onDragStart={(e) => handleCategoryDragStart(e, category)} onDragOver={handleCategoryDragOver} onDrop={(e) => handleCategoryDrop(e, category)} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, border: 1, borderColor: 'divider', backgroundColor: 'background.paper', cursor: 'grab' }}>
+                    <GripVertical style={{ color: theme.palette.text.secondary, flexShrink: 0 }} size={16} />
                     {editingCategory === category ? (
                       <>
                         <TextField value={editCategoryName} onChange={(e) => setEditCategoryName(e.target.value)} variant="outlined" size="small" sx={{ flex: 1 }} />
@@ -319,19 +319,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Manage Exercises */}
             <div>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: darkMode ? '#e5e7eb' : '#374151' }}>Manage Exercises</Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Manage Exercises</Typography>
               <Button onClick={onOpenAddExercise} variant="contained" startIcon={<Plus size={18} />} sx={{ mb: 1 }}>Add Exercise</Button>
               <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {Object.keys(exercises).map(category => (
-                  <Box key={category} sx={{ borderRadius: 1, p: 1.5, border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, backgroundColor: darkMode ? '#0b1220' : '#ffffff' }}>
-                    <Typography sx={{ fontWeight: 700, textTransform: 'capitalize', mb: 1, color: darkMode ? '#e5e7eb' : '#111827' }}>{category}</Typography>
+                  <Box key={category} sx={{ borderRadius: 1, p: 1.5, border: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}>
+                    <Typography sx={{ fontWeight: 700, textTransform: 'capitalize', mb: 1, color: 'text.primary' }}>{category}</Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       {exercises[category].length === 0 ? (
-                        <Typography sx={{ color: darkMode ? '#9ca3af' : '#6b7280', fontStyle: 'italic' }}>No exercises</Typography>
+                        <Typography sx={{ color: 'text.secondary', fontStyle: 'italic' }}>No exercises</Typography>
                       ) : (
                         exercises[category].map((exercise, index) => (
-                          <Box key={exercise} draggable onDragStart={(e) => handleDragStart(e, category, index)} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, category, index)} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: darkMode ? '#1f2937' : '#f8fafc' } }} style={{ cursor: 'grab' }}>
-                            <GripVertical style={{ color: darkMode ? '#6b7280' : '#9ca3af' }} size={compactView ? 12 : 16} />
+                          <Box key={exercise} draggable onDragStart={(e) => handleDragStart(e, category, index)} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, category, index)} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: 'action.hover' } }} style={{ cursor: 'grab' }}>
+                            <GripVertical style={{ color: theme.palette.text.secondary }} size={compactView ? 12 : 16} />
                             {editingExercise?.category === category && editingExercise?.name === exercise ? (
                               <>
                                 <TextField value={editExerciseName} onChange={(e) => setEditExerciseName(e.target.value)} size="small" sx={{ flex: 1 }} />
@@ -356,18 +356,18 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Goals */}
             <div>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: darkMode ? '#e5e7eb' : '#374151' }}>Goals</Typography>
-              <Typography variant="body2" sx={{ mb: 2, color: darkMode ? '#9ca3af' : '#4b5563' }}>Set how many exercises must be completed each week</Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Goals</Typography>
+              <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>Set how many exercises must be completed each week</Typography>
               {Object.keys(exercises).map(category => (
-                <Box key={category} sx={{ mb: 2, p: 2, borderRadius: 1, border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, backgroundColor: darkMode ? '#0b1220' : '#ffffff' }}>
+                <Box key={category} sx={{ mb: 2, p: 2, borderRadius: 1, border: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <input type="checkbox" checked={goalSettings[category]?.enabled ?? false} onChange={() => toggleGoalSetting(category)} style={{ width: 20, height: 20 }} />
-                    <Typography sx={{ fontWeight: 600, textTransform: 'capitalize', color: darkMode ? '#e5e7eb' : '#374151' }}>{category}</Typography>
+                    <Typography sx={{ fontWeight: 600, textTransform: 'capitalize', color: 'text.primary' }}>{category}</Typography>
                   </Box>
                   {goalSettings[category]?.enabled && (
                     <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Typography sx={{ color: darkMode ? '#9ca3af' : '#6b7280' }}>Exercises required per week:</Typography>
-                      <TextField type="number" inputProps={{ min: 1, max: exercises[category].length * 7 }} value={goalSettings[category]?.required ?? 3} onChange={(e) => updateGoalRequired(category, e.target.value)} size="small" sx={{ width: 80 }} />
+                      <Typography sx={{ color: 'text.secondary' }}>Exercises required per week:</Typography>
+                      <TextField type="number" slotProps={{ htmlInput: { min: 1, max: exercises[category].length * 7 } }} value={goalSettings[category]?.required ?? 3} onChange={(e) => updateGoalRequired(category, e.target.value)} size="small" sx={{ width: 80 }} />
                     </Box>
                   )}
                 </Box>
@@ -376,7 +376,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
           </Box>
         </Box>
-        <Box sx={{ p: 3, borderTop: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, flexShrink: 0 }}>
+        <Box sx={{ p: 3, borderTop: 1, borderColor: 'divider', flexShrink: 0 }}>
           <Button onClick={onClose} variant="contained" color="primary" fullWidth>Done</Button>
         </Box>
       </Box>
