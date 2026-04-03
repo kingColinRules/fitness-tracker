@@ -54,8 +54,42 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [editingExercise, setEditingExercise] = useState<{ category: string; name: string } | null>(null);
   const [editExerciseName, setEditExerciseName] = useState('');
   const [draggedItem, setDraggedItem] = useState<{ category: string; index: number } | null>(null);
+  const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
 
   if (!open) return null;
+
+  const handleCategoryDragStart = (e: React.DragEvent, category: string) => {
+    setDraggedCategory(category);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleCategoryDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleCategoryDrop = (e: React.DragEvent, targetCategory: string) => {
+    e.preventDefault();
+    if (!draggedCategory || draggedCategory === targetCategory) {
+      setDraggedCategory(null);
+      return;
+    }
+    const keys = Object.keys(exercises);
+    const fromIndex = keys.indexOf(draggedCategory);
+    const toIndex = keys.indexOf(targetCategory);
+    const reordered = [...keys];
+    reordered.splice(fromIndex, 1);
+    reordered.splice(toIndex, 0, draggedCategory);
+    const newExercises: Record<string, string[]> = {};
+    const newGoalSettings: Record<string, { enabled: boolean; required: number }> = {};
+    reordered.forEach(key => {
+      newExercises[key] = exercises[key];
+      newGoalSettings[key] = goalSettings[key];
+    });
+    setExercises(newExercises);
+    setGoalSettings(newGoalSettings);
+    setDraggedCategory(null);
+  };
 
   const startEditCategory = (category: string) => {
     setEditingCategory(category);
@@ -263,7 +297,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <Button onClick={onOpenAddCategory} variant="contained" startIcon={<Plus size={18} />} sx={{ mb: 1 }}>Add Category</Button>
               <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {Object.keys(exercises).map(category => (
-                  <Box key={category} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, backgroundColor: darkMode ? '#0f172a' : '#ffffff' }}>
+                  <Box key={category} draggable onDragStart={(e) => handleCategoryDragStart(e, category)} onDragOver={handleCategoryDragOver} onDrop={(e) => handleCategoryDrop(e, category)} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, border: `1px solid ${darkMode ? '#374151' : '#e5e7eb'}`, backgroundColor: darkMode ? '#0f172a' : '#ffffff', cursor: 'grab' }}>
+                    <GripVertical style={{ color: darkMode ? '#6b7280' : '#9ca3af', flexShrink: 0 }} size={16} />
                     {editingCategory === category ? (
                       <>
                         <TextField value={editCategoryName} onChange={(e) => setEditCategoryName(e.target.value)} variant="outlined" size="small" sx={{ flex: 1 }} />
