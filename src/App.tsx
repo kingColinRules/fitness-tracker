@@ -498,14 +498,14 @@ const ExerciseTracker = () => {
       />
 
       <AddCategoryModal
-        key={showAddCategory ? 'open' : 'closed'}
+        key={showAddCategory ? 'add-category-open' : 'add-category-closed'}
         open={showAddCategory}
         onClose={() => setShowAddCategory(false)}
         onAdd={addCategory}
       />
 
       <AddExerciseModal
-        key={showAddExercise ? 'open' : 'closed'}
+        key={showAddExercise ? 'add-exercise-open' : 'add-exercise-closed'}
         open={showAddExercise}
         onClose={() => setShowAddExercise(false)}
         onAdd={addExercise}
