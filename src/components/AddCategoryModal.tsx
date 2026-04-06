@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Modal from '@mui/material/Modal';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
@@ -15,8 +16,6 @@ interface AddCategoryModalProps {
 const AddCategoryModal: React.FC<AddCategoryModalProps> = ({ open, onClose, onAdd }) => {
   const [name, setName] = useState('');
 
-  if (!open) return null;
-
   const handleAdd = () => {
     if (name.trim()) {
       onAdd(name.trim());
@@ -25,8 +24,8 @@ const AddCategoryModal: React.FC<AddCategoryModalProps> = ({ open, onClose, onAd
   };
 
   return (
-    <Box sx={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 90, pointerEvents: 'none' }}>
-      <Box sx={{ pointerEvents: 'auto', borderRadius: 2, boxShadow: 6, p: 3, maxWidth: 480, width: '100%', mx: 2, backgroundColor: 'background.paper', color: 'text.primary' }}>
+    <Modal open={open} onClose={onClose}>
+      <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', borderRadius: 2, boxShadow: 6, p: 3, maxWidth: 480, width: 'calc(100% - 32px)', backgroundColor: 'background.paper', color: 'text.primary' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>Add Category</Typography>
           <IconButton onClick={onClose}><X size={24} /></IconButton>
@@ -40,7 +39,7 @@ const AddCategoryModal: React.FC<AddCategoryModalProps> = ({ open, onClose, onAd
           <Button onClick={handleAdd} variant="contained">Add</Button>
         </Box>
       </Box>
-    </Box>
+    </Modal>
   );
 };
 

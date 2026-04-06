@@ -1,6 +1,7 @@
 import React from 'react';
 import { X } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Modal from '@mui/material/Modal';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
@@ -18,8 +19,6 @@ interface BadgesModalProps {
 
 const BadgesModal: React.FC<BadgesModalProps> = ({ open, onClose, exercises, completions, dates }) => {
   const theme = useTheme();
-
-  if (!open) return null;
 
   const totalCompletions = dates.reduce((sum, date) => {
     const dateStr = formatDateKey(date);
@@ -43,8 +42,8 @@ const BadgesModal: React.FC<BadgesModalProps> = ({ open, onClose, exercises, com
   ];
 
   return (
-    <Box sx={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 90, pointerEvents: 'none' }}>
-      <Box sx={{ pointerEvents: 'auto', borderRadius: 2, boxShadow: 6, p: 3, maxWidth: 960, width: '100%', mx: 2, maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'background.paper', color: 'text.primary' }}>
+    <Modal open={open} onClose={onClose}>
+      <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', borderRadius: 2, boxShadow: 6, p: 3, maxWidth: 960, width: 'calc(100% - 32px)', maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'background.paper', color: 'text.primary' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Typography variant="h5" sx={{ fontWeight: 700 }}>Achievement Badges</Typography>
           <IconButton onClick={onClose}><X size={24} /></IconButton>
@@ -70,7 +69,7 @@ const BadgesModal: React.FC<BadgesModalProps> = ({ open, onClose, exercises, com
           <Button onClick={onClose} variant="contained">Close</Button>
         </Box>
       </Box>
-    </Box>
+    </Modal>
   );
 };
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Plus, Trash2, Edit2, GripVertical, Download, Upload } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Modal from '@mui/material/Modal';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
@@ -53,8 +54,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [draggedItem, setDraggedItem] = useState<{ category: string; index: number } | null>(null);
   const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
   const theme = useTheme();
-
-  if (!open) return null;
 
   const handleCategoryDragStart = (e: React.DragEvent, category: string) => {
     setDraggedCategory(category);
@@ -225,8 +224,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <Box sx={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 90, pointerEvents: 'none' }}>
-      <Box sx={{ pointerEvents: 'auto', borderRadius: 2, boxShadow: 6, width: '100%', maxWidth: 960, mx: 2, display: 'flex', flexDirection: 'column', backgroundColor: 'background.paper', color: 'text.primary', maxHeight: '90vh' }}>
+    <Modal open={open} onClose={onClose}>
+      <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', borderRadius: 2, boxShadow: 6, width: 'calc(100% - 32px)', maxWidth: 960, display: 'flex', flexDirection: 'column', backgroundColor: 'background.paper', color: 'text.primary', maxHeight: '90vh' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 3, borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
           <Typography variant="h5" sx={{ fontWeight: 700 }}>Settings</Typography>
           <IconButton onClick={onClose} sx={{ p: 1 }}><X size={24} /></IconButton>
@@ -235,7 +234,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
             {/* Appearance */}
-            <div>
+            <Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Appearance</Typography>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
                 <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Theme</Typography>
@@ -266,10 +265,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   ))}
                 </ToggleButtonGroup>
               </Box>
-            </div>
+            </Box>
 
             {/* Data & Backup */}
-            <div>
+            <Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Data & Backup</Typography>
               <Box sx={{ p: 1.5, borderRadius: 1, mb: 1, backgroundColor: 'action.hover' }}>
                 <Typography variant="body2" sx={{ color: 'text.secondary' }}><strong>Last export:</strong> {getLastExportInfo()}</Typography>
@@ -285,10 +284,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </Button>
               </Box>
               <Button onClick={handleClearData} variant="contained" color="error" sx={{ mt: 2 }}>Clear All Data</Button>
-            </div>
+            </Box>
 
             {/* Manage Categories */}
-            <div>
+            <Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Manage Categories</Typography>
               <Button onClick={onOpenAddCategory} variant="contained" startIcon={<Plus size={18} />} sx={{ mb: 1 }}>Add Category</Button>
               <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -311,10 +310,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   </Box>
                 ))}
               </Box>
-            </div>
+            </Box>
 
             {/* Manage Exercises */}
-            <div>
+            <Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Manage Exercises</Typography>
               <Button onClick={onOpenAddExercise} variant="contained" startIcon={<Plus size={18} />} sx={{ mb: 1 }}>Add Exercise</Button>
               <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -348,10 +347,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   </Box>
                 ))}
               </Box>
-            </div>
+            </Box>
 
             {/* Goals */}
-            <div>
+            <Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Goals</Typography>
               <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>Set how many exercises must be completed each week</Typography>
               {Object.keys(exercises).map(category => (
@@ -368,7 +367,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   )}
                 </Box>
               ))}
-            </div>
+            </Box>
 
           </Box>
         </Box>
@@ -376,7 +375,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <Button onClick={onClose} variant="contained" color="primary" fullWidth>Done</Button>
         </Box>
       </Box>
-    </Box>
+    </Modal>
   );
 };
 
