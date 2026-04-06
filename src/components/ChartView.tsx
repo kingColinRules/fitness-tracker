@@ -4,6 +4,7 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import { months, formatDateKey, formatRange, generateWeekDates } from '../utils/dateUtils';
+import { isCompleted as isCompletedUtil } from '../utils/completionUtils';
 
 interface ChartViewProps {
   exercises: Record<string, string[]>;
@@ -28,15 +29,12 @@ const ChartView: React.FC<ChartViewProps> = ({
 }) => {
   const theme = useTheme();
 
-  const isCompleted = (category: string, exercise: string, dateStr: string): boolean =>
-    completions[`${category}-${exercise}-${dateStr}`] || false;
-
   const generateChartDataForWeek = (start: Date) =>
     generateWeekDates(start).map(date => {
       const dateStr = formatDateKey(date);
       const data: Record<string, unknown> = { date: `${date.getDate()}/${date.getMonth() + 1}` };
       Object.keys(exercises).forEach(category => {
-        data[category] = exercises[category].filter(ex => isCompleted(category, ex, dateStr)).length;
+        data[category] = exercises[category].filter(ex => isCompletedUtil(completions, category, ex, dateStr)).length;
       });
       return data;
     });
@@ -46,7 +44,7 @@ const ChartView: React.FC<ChartViewProps> = ({
       const dateStr = formatDateKey(date);
       const data: Record<string, unknown> = { date: `${date.getMonth() + 1}/${date.getDate()}` };
       Object.keys(exercises).forEach(category => {
-        data[category] = exercises[category].filter(ex => isCompleted(category, ex, dateStr)).length;
+        data[category] = exercises[category].filter(ex => isCompletedUtil(completions, category, ex, dateStr)).length;
       });
       return data;
     });

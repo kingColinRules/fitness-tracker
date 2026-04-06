@@ -6,6 +6,7 @@ import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import { useTheme } from '@mui/material/styles';
 import { formatDateKey } from '../utils/dateUtils';
+import { isCompleted as isCompletedUtil } from '../utils/completionUtils';
 
 interface BadgesModalProps {
   open: boolean;
@@ -20,20 +21,17 @@ const BadgesModal: React.FC<BadgesModalProps> = ({ open, onClose, exercises, com
 
   if (!open) return null;
 
-  const isCompleted = (category: string, exercise: string, dateStr: string): boolean =>
-    completions[`${category}-${exercise}-${dateStr}`] || false;
-
   const totalCompletions = dates.reduce((sum, date) => {
     const dateStr = formatDateKey(date);
     return sum + Object.keys(exercises).reduce((catSum, category) => {
-      return catSum + exercises[category].filter(ex => isCompleted(category, ex, dateStr)).length;
+      return catSum + exercises[category].filter(ex => isCompletedUtil(completions, category, ex, dateStr)).length;
     }, 0);
   }, 0);
 
   const activeDays = dates.filter(date => {
     const dateStr = formatDateKey(date);
     return Object.keys(exercises).some(category =>
-      exercises[category].some(ex => isCompleted(category, ex, dateStr))
+      exercises[category].some(ex => isCompletedUtil(completions, category, ex, dateStr))
     );
   }).length;
 
@@ -55,12 +53,12 @@ const BadgesModal: React.FC<BadgesModalProps> = ({ open, onClose, exercises, com
           {badges.map((badge, index) => (
             <Box key={index} sx={{ p: 2, borderRadius: 1, border: `2px solid ${badge.earned ? 'transparent' : theme.palette.divider}`, backgroundColor: badge.earned ? undefined : theme.palette.action.hover, color: badge.earned ? 'text.primary' : 'text.secondary' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                <span style={{ fontSize: 28, opacity: !badge.earned ? 0.3 : 1 }}>{badge.icon}</span>
+                <Box component="span" sx={{ fontSize: 28, opacity: !badge.earned ? 0.3 : 1 }}>{badge.icon}</Box>
                 <Box sx={{ flex: 1 }}>
-                  <div style={{ fontWeight: 700, fontSize: 16 }}>{badge.name}</div>
-                  <div style={{ fontSize: 13, marginTop: 6 }}>{badge.progress} / {badge.target} {badge.name.includes('Day') ? 'days' : 'completions'}</div>
+                  <Box sx={{ fontWeight: 700, fontSize: 16 }}>{badge.name}</Box>
+                  <Box sx={{ fontSize: 13, mt: '6px' }}>{badge.progress} / {badge.target} {badge.name.includes('Day') ? 'days' : 'completions'}</Box>
                 </Box>
-                {badge.earned && <div style={{ fontSize: 20 }}>✓</div>}
+                {badge.earned && <Box sx={{ fontSize: 20 }}>✓</Box>}
               </Box>
               <Box sx={{ width: '100%', height: 8, borderRadius: 1, backgroundColor: 'divider' }}>
                 <Box sx={{ height: '100%', borderRadius: 1, transition: 'width 300ms', backgroundColor: badge.earned ? 'success.main' : 'primary.main', width: `${Math.min((badge.progress / badge.target) * 100, 100)}%` }} />

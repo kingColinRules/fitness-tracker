@@ -7,14 +7,10 @@ import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Checkbox from '@mui/material/Checkbox';
 import { useTheme } from '@mui/material/styles';
 import { getLastExportInfo } from '../utils/fileSystem';
-
-const DEFAULT_EXERCISES = {
-  weight: ['Bench Press', 'Squats', 'Deadlifts', 'Overhead Press', 'Rows'],
-  isometric: ['Plank', 'Wall Sit', 'Hollow Body Hold', 'L-Sit'],
-  stretch: ['Hamstring Stretch', 'Quad Stretch', 'Shoulder Stretch', 'Hip Flexor Stretch'],
-};
+import { DEFAULT_EXERCISES } from '../constants';
 
 interface SettingsModalProps {
   open: boolean;
@@ -361,7 +357,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               {Object.keys(exercises).map(category => (
                 <Box key={category} sx={{ mb: 2, p: 2, borderRadius: 1, border: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <input type="checkbox" checked={goalSettings[category]?.enabled ?? false} onChange={() => toggleGoalSetting(category)} style={{ width: 20, height: 20 }} />
+                    <Checkbox checked={goalSettings[category]?.enabled ?? false} onChange={() => toggleGoalSetting(category)} size="small" />
                     <Typography sx={{ fontWeight: 600, textTransform: 'capitalize', color: 'text.primary' }}>{category}</Typography>
                   </Box>
                   {goalSettings[category]?.enabled && (

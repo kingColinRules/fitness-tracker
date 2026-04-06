@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Settings, Award, Save } from 'lucide-react';
+import { Settings, Award, Save, BarChart2 } from 'lucide-react';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
@@ -20,6 +20,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import dayjs, { Dayjs } from 'dayjs';
 import { createAppTheme } from './theme';
+import { DEFAULT_EXERCISES } from './constants';
 
 import { generateDates, generateWeekDates, startOfWeek, formatDateKey, formatRange } from './utils/dateUtils';
 import { getStoredHandle, storeHandle, generateExportJSON } from './utils/fileSystem';
@@ -31,12 +32,6 @@ import AddCategoryModal from './components/AddCategoryModal';
 import AddExerciseModal from './components/AddExerciseModal';
 import StatsModal from './components/StatsModal';
 import BadgesModal from './components/BadgesModal';
-
-const DEFAULT_EXERCISES = {
-  weight: ['Bench Press', 'Squats', 'Deadlifts', 'Overhead Press', 'Rows'],
-  isometric: ['Plank', 'Wall Sit', 'Hollow Body Hold', 'L-Sit'],
-  stretch: ['Hamstring Stretch', 'Quad Stretch', 'Shoulder Stretch', 'Hip Flexor Stretch'],
-};
 
 const ExerciseTracker = () => {
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth());
@@ -117,14 +112,8 @@ const ExerciseTracker = () => {
   const calendarAnchorRef = useRef<HTMLButtonElement>(null);
   const fileHandleRef = useRef<FileSystemFileHandle | null>(null);
 
-  const [streakLeft, setStreakLeft] = useState<number>(compactView ? 72 : 200);
-  const [chartMode, setChartMode] = useState<'weekly' | 'monthly'>(() => {
-    try {
-      const s = localStorage.getItem('exerciseSettings');
-      if (s) return JSON.parse(s).defaultChartMode || 'weekly';
-    } catch { /* ignore */ }
-    return 'weekly';
-  });
+  const [exerciseColumnWidth, setExerciseColumnWidth] = useState<number>(compactView ? 72 : 200);
+  const [chartMode, setChartMode] = useState<'weekly' | 'monthly'>(defaultChartMode);
   const [weekStartDate, setWeekStartDate] = useState<Date>(() => startOfWeek(new Date(), weekStartDay));
   const [selectedDateValue, setSelectedDateValue] = useState<Dayjs | null>(dayjs(new Date()));
 
@@ -149,7 +138,7 @@ const ExerciseTracker = () => {
   useEffect(() => {
     const measure = () => {
       const el = exerciseHeaderRef.current;
-      if (el) setStreakLeft(el.offsetWidth);
+      if (el) setExerciseColumnWidth(el.offsetWidth);
     };
     measure();
     window.addEventListener('resize', measure);
@@ -368,6 +357,7 @@ const ExerciseTracker = () => {
                   </IconButton>
                 </span>
               </MuiTooltip>
+              <IconButton onClick={() => setShowStats(true)} color="inherit"><BarChart2 size={20} /></IconButton>
               <IconButton onClick={() => setShowBadges(true)} color="inherit"><Award size={20} /></IconButton>
               <IconButton onClick={() => setShowSettings(true)} color="inherit"><Settings size={20} /></IconButton>
             </Box>
@@ -438,7 +428,7 @@ const ExerciseTracker = () => {
               tableDates={tableDates}
               chartMode={chartMode}
               compactView={compactView}
-              streakLeft={streakLeft}
+              exerciseColumnWidth={exerciseColumnWidth}
               weekStartDay={weekStartDay}
               tableWrapperRef={tableWrapperRef}
               exerciseHeaderRef={exerciseHeaderRef}

@@ -5,6 +5,7 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import { formatDateKey } from '../utils/dateUtils';
+import { isCompleted as isCompletedUtil } from '../utils/completionUtils';
 
 interface StatsModalProps {
   open: boolean;
@@ -17,13 +18,10 @@ interface StatsModalProps {
 const StatsModal: React.FC<StatsModalProps> = ({ open, onClose, exercises, completions, dates }) => {
   if (!open) return null;
 
-  const isCompleted = (category: string, exercise: string, dateStr: string): boolean =>
-    completions[`${category}-${exercise}-${dateStr}`] || false;
-
   const totalCompletions = dates.reduce((sum, date) => {
     const dateStr = formatDateKey(date);
     return sum + Object.keys(exercises).reduce((catSum, category) => {
-      return catSum + exercises[category].filter(ex => isCompleted(category, ex, dateStr)).length;
+      return catSum + exercises[category].filter(ex => isCompletedUtil(completions, category, ex, dateStr)).length;
     }, 0);
   }, 0);
 
@@ -31,14 +29,14 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, onClose, exercises, compl
   Object.keys(exercises).forEach(category => {
     completionsByCategory[category] = dates.reduce((sum, date) => {
       const dateStr = formatDateKey(date);
-      return sum + exercises[category].filter(ex => isCompleted(category, ex, dateStr)).length;
+      return sum + exercises[category].filter(ex => isCompletedUtil(completions, category, ex, dateStr)).length;
     }, 0);
   });
 
   const activeDays = dates.filter(date => {
     const dateStr = formatDateKey(date);
     return Object.keys(exercises).some(category =>
-      exercises[category].some(ex => isCompleted(category, ex, dateStr))
+      exercises[category].some(ex => isCompletedUtil(completions, category, ex, dateStr))
     );
   }).length;
 
