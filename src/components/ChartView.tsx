@@ -16,8 +16,6 @@ interface ChartViewProps {
   selectedYear: number;
 }
 
-const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-
 const ChartView: React.FC<ChartViewProps> = ({
   exercises,
   completions,
@@ -74,7 +72,7 @@ const ChartView: React.FC<ChartViewProps> = ({
           />
           <Legend />
           {Object.keys(exercises).map((category, idx) => (
-            <Line key={category} type="monotone" dataKey={category} stroke={CHART_COLORS[idx % CHART_COLORS.length]} strokeWidth={2} />
+            <Line key={category} type="monotone" dataKey={category} stroke={theme.palette.chartColors[idx % theme.palette.chartColors.length]} strokeWidth={2} />
           ))}
         </LineChart>
       </ResponsiveContainer>

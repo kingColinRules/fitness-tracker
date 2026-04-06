@@ -9,7 +9,7 @@ import TableCell from '@mui/material/TableCell';
 import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
-import { useTheme } from '@mui/material/styles';
+import { useTheme, alpha } from '@mui/material/styles';
 import dayjs from 'dayjs';
 import { formatDateKey, isToday, isFutureDate, startOfWeek } from '../utils/dateUtils';
 import { isCompleted as isCompletedUtil } from '../utils/completionUtils';
@@ -45,7 +45,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
   const isDark = theme.palette.mode === 'dark';
 
   const headerBg = theme.palette.action.hover;
-  const categoryBg = isDark ? theme.palette.background.default : theme.palette.primary.light + '22';
+  const categoryBg = isDark ? theme.palette.background.default : alpha(theme.palette.primary.light, 0.13);
   const rowBg = theme.palette.background.paper;
 
   const isCompleted = (category: string, exercise: string, dateStr: string): boolean =>
@@ -72,7 +72,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
             <TableCell ref={exerciseHeaderRef} sx={{ fontWeight: 600, position: 'sticky', left: 0, zIndex: 70, minWidth: 120, backgroundColor: headerBg, color: 'text.primary' }}>Exercise</TableCell>
             <TableCell sx={{ fontWeight: 600, position: 'sticky', left: `${exerciseColumnWidth}px`, zIndex: 60, textAlign: 'center', minWidth: 80, backgroundColor: headerBg, color: 'text.primary' }}>Weekly <br />Progress</TableCell>
             {tableDates.map(date => (
-              <TableCell key={date.toISOString()} data-date={formatDateKey(date)} align="center" sx={{ fontWeight: 600, minWidth: chartMode === 'weekly' ? 80 : 24, borderColor: 'divider', backgroundColor: isToday(date) ? theme.palette.action.selected : undefined, color: 'text.primary', lineHeight: 1.2, px: 0.25 }}>
+              <TableCell key={date.toISOString()} data-date={formatDateKey(date)} align="center" sx={{ fontWeight: 600, minWidth: chartMode === 'weekly' ? 80 : 24, borderColor: 'divider', backgroundColor: undefined, borderBottom: isToday(date) ? `3px solid ${theme.palette.primary.main}` : undefined, color: 'text.primary', lineHeight: 1.2, px: 0.25 }}>
                 <Box sx={{ fontSize: '0.65rem', opacity: 0.7 }}>{dayjs(date).format('ddd')}</Box>
                 <Box sx={{ fontSize: '0.75rem' }}>{chartMode === 'weekly' ? dayjs(date).format('DD MMM') : String(date.getDate()).padStart(2, '0')}</Box>
               </TableCell>
@@ -108,10 +108,9 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                     {tableDates.map(date => {
                       const dateStr = formatDateKey(date);
                       const completed = isCompleted(category, exercise, dateStr);
-                      const isTodayColumn = isToday(date);
                       const isFuture = isFutureDate(date);
                       return (
-                        <TableCell key={date.toISOString()} data-date-cell align="center" sx={{ borderColor: 'divider', backgroundColor: isTodayColumn ? theme.palette.action.selected : undefined, px: 0.5, py: 0.5 }}>
+                        <TableCell key={date.toISOString()} data-date-cell align="center" sx={{ borderColor: 'divider', backgroundColor: undefined, px: 0.5, py: 0.5 }}>
                           <Button
                             onClick={() => !isFuture && toggleCompletion(category, exercise, dateStr)}
                             disabled={isFuture}

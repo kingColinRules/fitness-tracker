@@ -13,9 +13,6 @@ interface HeatmapViewProps {
   completions: Record<string, boolean>;
 }
 
-const COLORS_LIGHT = ['#f3f4f6', '#ffedd5', '#fdba74', '#fb923c', '#ef4444'];
-const COLORS_DARK  = ['#374151', '#7c2d12', '#b45309', '#f97316', '#dc2626'];
-
 const HeatmapView: React.FC<HeatmapViewProps> = ({
   dates,
   selectedMonth,
@@ -26,7 +23,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
-  const colors = isDark ? COLORS_DARK : COLORS_LIGHT;
+  const colors = theme.palette.heatmap;
 
   const getHeatmapIntensity = (date: Date): number => {
     const dateStr = formatDateKey(date);
@@ -56,24 +53,24 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
         {dates.map(date => {
           const intensity = getHeatmapIntensity(date);
           const bg = colors[intensity];
-          const textColor = isDark ? '#ffffff' : (intensity >= 3 ? '#ffffff' : '#1f2937');
+          const textColor = isDark ? theme.palette.common.white : (intensity >= 3 ? theme.palette.common.white : theme.palette.text.primary);
           const today = isToday(date);
           return (
             <Box key={date.toISOString()} sx={{ backgroundColor: bg, borderRadius: 1, p: 1, textAlign: 'center', color: textColor, outline: today ? `2px solid ${theme.palette.primary.main}` : 'none', outlineOffset: '-2px' }}>
-              <div style={{ fontSize: 12, fontWeight: 600 }}>{formatDate(date)}</div>
-              <div style={{ fontSize: 10, marginTop: 2, opacity: 0.8 }}>{intensity > 0 ? `${intensity} ex` : ''}</div>
+              <Box sx={{ fontSize: '0.75rem', fontWeight: 600 }}>{formatDate(date)}</Box>
+              <Box sx={{ fontSize: '0.625rem', mt: '2px', opacity: 0.8 }}>{intensity > 0 ? `${intensity} ex` : ''}</Box>
             </Box>
           );
         })}
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 3 }}>
-        <span style={{ fontSize: 13, color: theme.palette.text.secondary }}>Less</span>
+        <Box component="span" sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>Less</Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           {[0, 1, 2, 3, 4].map(level => (
-            <div key={level} style={{ width: 24, height: 24, backgroundColor: colors[level], borderRadius: 6 }} />
+            <Box key={level} sx={{ width: 24, height: 24, backgroundColor: colors[level], borderRadius: '6px' }} />
           ))}
         </Box>
-        <span style={{ fontSize: 13, color: theme.palette.text.secondary }}>More</span>
+        <Box component="span" sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>More</Box>
       </Box>
     </Box>
   );

@@ -36,11 +36,11 @@ const AddExerciseModal: React.FC<AddExerciseModalProps> = ({ open, onClose, onAd
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Box>
-            <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 1 }}>Exercise Name</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Exercise Name</Typography>
             <TextField value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Pull-ups" fullWidth />
           </Box>
           <Box>
-            <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 1 }}>Category</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>Category</Typography>
             <TextField select value={category} onChange={(e) => setCategory(e.target.value)} SelectProps={{ native: true }} fullWidth>
               {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </TextField>

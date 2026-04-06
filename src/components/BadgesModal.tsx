@@ -55,8 +55,8 @@ const BadgesModal: React.FC<BadgesModalProps> = ({ open, onClose, exercises, com
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
                 <Box component="span" sx={{ fontSize: 28, opacity: !badge.earned ? 0.3 : 1 }}>{badge.icon}</Box>
                 <Box sx={{ flex: 1 }}>
-                  <Box sx={{ fontWeight: 700, fontSize: 16 }}>{badge.name}</Box>
-                  <Box sx={{ fontSize: 13, mt: '6px' }}>{badge.progress} / {badge.target} {badge.name.includes('Day') ? 'days' : 'completions'}</Box>
+                  <Box sx={{ fontWeight: 700, fontSize: '1rem' }}>{badge.name}</Box>
+                  <Box sx={{ fontSize: '0.8125rem', mt: '6px' }}>{badge.progress} / {badge.target} {badge.name.includes('Day') ? 'days' : 'completions'}</Box>
                 </Box>
                 {badge.earned && <Box sx={{ fontSize: 20 }}>✓</Box>}
               </Box>

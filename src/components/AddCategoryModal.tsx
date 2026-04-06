@@ -32,7 +32,7 @@ const AddCategoryModal: React.FC<AddCategoryModalProps> = ({ open, onClose, onAd
           <IconButton onClick={onClose}><X size={24} /></IconButton>
         </Box>
         <Box>
-          <Typography sx={{ fontSize: 14, fontWeight: 600, mb: 1, color: 'text.secondary' }}>Category Name</Typography>
+          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: 'text.secondary' }}>Category Name</Typography>
           <TextField value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Cardio" fullWidth />
         </Box>
         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
