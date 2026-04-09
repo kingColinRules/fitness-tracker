@@ -1,4 +1,5 @@
 import React from 'react';
+import confetti from 'canvas-confetti';
 import { Check } from 'lucide-react';
 import TableContainer from '@mui/material/TableContainer';
 import Table from '@mui/material/Table';
@@ -112,7 +113,22 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                       return (
                         <TableCell key={date.toISOString()} data-date-cell align="center" sx={{ borderColor: 'divider', backgroundColor: undefined, px: 0.5, py: 0.5 }}>
                           <Button
-                            onClick={() => !isFuture && toggleCompletion(category, exercise, dateStr)}
+                            onClick={(e) => {
+                              if (isFuture) return;
+                              if (showProgress && !completed && weeklyCount === requiredCount - 1) {
+                                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                confetti({
+                                  particleCount: 80,
+                                  spread: 60,
+                                  origin: {
+                                    x: (rect.left + rect.width / 2) / window.innerWidth,
+                                    y: (rect.top + rect.height / 2) / window.innerHeight,
+                                  },
+                                  zIndex: 9999,
+                                });
+                              }
+                              toggleCompletion(category, exercise, dateStr);
+                            }}
                             disabled={isFuture}
                             fullWidth
                             size={compactView ? 'small' : 'medium'}
