@@ -53,6 +53,11 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
     isCompletedUtil(completions, category, exercise, dateStr);
 
   const calculateWeeklyCount = (category: string, exercise: string): number => {
+    if (chartMode === 'weekly') {
+      return tableDates.filter(date =>
+        !isFutureDate(date) && isCompleted(category, exercise, formatDateKey(date))
+      ).length;
+    }
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const weekStart = startOfWeek(today, weekStartDay);
@@ -71,7 +76,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
         <TableHead>
           <TableRow sx={{ backgroundColor: headerBg }}>
             <TableCell ref={exerciseHeaderRef} sx={{ fontWeight: 600, position: 'sticky', left: 0, zIndex: 70, minWidth: 120, backgroundColor: headerBg, color: 'text.primary' }}>Exercise</TableCell>
-            <TableCell sx={{ fontWeight: 600, position: 'sticky', left: `${exerciseColumnWidth}px`, zIndex: 60, textAlign: 'center', minWidth: 80, backgroundColor: headerBg, color: 'text.primary' }}>Weekly <br />Progress</TableCell>
+            <TableCell sx={{ fontWeight: 600, position: 'sticky', left: `${exerciseColumnWidth}px`, zIndex: 60, textAlign: 'center', minWidth: 80, backgroundColor: headerBg, color: 'text.primary' }}>Progress</TableCell>
             {tableDates.map(date => (
               <TableCell key={date.toISOString()} data-date={formatDateKey(date)} align="center" sx={{ fontWeight: 600, minWidth: chartMode === 'weekly' ? 80 : 24, borderColor: 'divider', backgroundColor: undefined, borderBottom: isToday(date) ? `3px solid ${theme.palette.primary.main}` : undefined, color: 'text.primary', lineHeight: 1.2, px: 0.25 }}>
                 <Box sx={{ fontSize: '0.65rem', opacity: 0.7 }}>{dayjs(date).format('ddd')}</Box>
