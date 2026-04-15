@@ -337,7 +337,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </ToggleButtonGroup>
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
-                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Density</Typography>
+                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Size</Typography>
                 <ToggleButtonGroup color="primary" value={compactView ? 'compact' : 'normal'} exclusive onChange={(_e, val) => { if (val) setCompactView(val === 'compact'); }} size="small">
                   <ToggleButton value="normal">Normal</ToggleButton>
                   <ToggleButton value="compact">Compact</ToggleButton>
