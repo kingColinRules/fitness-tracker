@@ -79,8 +79,8 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
             <TableCell sx={{ fontWeight: 600, position: 'sticky', left: `${exerciseColumnWidth}px`, zIndex: 60, textAlign: 'center', minWidth: 80, backgroundColor: headerBg, color: 'text.primary' }}>Progress</TableCell>
             {tableDates.map(date => (
               <TableCell key={date.toISOString()} data-date={formatDateKey(date)} align="center" sx={{ fontWeight: 600, minWidth: chartMode === 'weekly' ? 80 : 24, borderColor: 'divider', backgroundColor: undefined, borderBottom: isToday(date) ? `3px solid ${theme.palette.primary.main}` : undefined, color: 'text.primary', lineHeight: 1.2, px: 0.25 }}>
-                <Box sx={{ fontSize: '0.65rem', opacity: 0.7 }}>{dayjs(date).format('ddd')}</Box>
-                <Box sx={{ fontSize: '0.75rem' }}>{chartMode === 'weekly' ? dayjs(date).format('DD MMM') : String(date.getDate()).padStart(2, '0')}</Box>
+                <Box sx={{ fontSize: theme.typography.labelXs.fontSize, opacity: 0.7 }}>{dayjs(date).format('ddd')}</Box>
+                <Box sx={{ fontSize: theme.typography.caption.fontSize }}>{chartMode === 'weekly' ? dayjs(date).format('DD MMM') : String(date.getDate()).padStart(2, '0')}</Box>
               </TableCell>
             ))}
           </TableRow>
@@ -107,7 +107,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                           <Box sx={{ width: compactView ? 28 : 36, height: compactView ? 4 : 6, borderRadius: 99, backgroundColor: 'divider', overflow: 'hidden' }}>
                             <Box sx={{ height: '100%', width: `${Math.min(weeklyCount / requiredCount, 1) * 100}%`, borderRadius: 99, backgroundColor: weeklyCount >= requiredCount ? 'success.main' : 'warning.main', transition: 'width 0.3s ease' }} />
                           </Box>
-                          <Box sx={{ fontSize: '0.6rem', color: 'text.secondary', lineHeight: 1 }}>{weeklyCount}/{requiredCount}</Box>
+                          <Box sx={{ fontSize: theme.typography.labelMicro.fontSize, color: 'text.secondary', lineHeight: 1 }}>{weeklyCount}/{requiredCount}</Box>
                         </Box>
                       )}
                     </TableCell>

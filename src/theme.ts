@@ -9,6 +9,22 @@ declare module '@mui/material/styles' {
     heatmap?: string[];
     chartColors?: string[];
   }
+  interface TypographyVariants {
+    labelMicro: React.CSSProperties;
+    labelXs: React.CSSProperties;
+    labelSm: React.CSSProperties;
+    labelLg: React.CSSProperties;
+    iconMd: React.CSSProperties;
+    iconLg: React.CSSProperties;
+  }
+  interface TypographyVariantsOptions {
+    labelMicro?: React.CSSProperties;
+    labelXs?: React.CSSProperties;
+    labelSm?: React.CSSProperties;
+    labelLg?: React.CSSProperties;
+    iconMd?: React.CSSProperties;
+    iconLg?: React.CSSProperties;
+  }
 }
 
 export const createAppTheme = (mode: 'light' | 'dark') =>
@@ -33,6 +49,14 @@ export const createAppTheme = (mode: 'light' | 'dark') =>
         ? ['#374151', '#7c2d12', '#b45309', '#f97316', '#dc2626']
         : ['#f3f4f6', '#ffedd5', '#fdba74', '#fb923c', '#ef4444'],
       chartColors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+    },
+    typography: {
+      labelMicro: { fontSize: '0.625rem' },
+      labelXs:    { fontSize: '0.65rem' },
+      labelSm:    { fontSize: '0.7rem' },
+      labelLg:    { fontSize: '0.8125rem' },
+      iconMd:     { fontSize: '1.25rem' },
+      iconLg:     { fontSize: '1.75rem' },
     },
     components: {
       MuiAppBar: {

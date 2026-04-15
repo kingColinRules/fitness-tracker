@@ -47,7 +47,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
       <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>Exercise Heatmap</Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
         {orderedDayLabels.map(label => (
-          <Box key={label} sx={{ textAlign: 'center', fontSize: '0.7rem', fontWeight: 600, pb: 0.5, color: 'text.secondary' }}>{label}</Box>
+          <Box key={label} sx={{ textAlign: 'center', fontSize: theme.typography.labelSm.fontSize, fontWeight: 600, pb: 0.5, color: 'text.secondary' }}>{label}</Box>
         ))}
         {Array.from({ length: leadingEmpties }).map((_, i) => <Box key={`empty-${i}`} />)}
         {dates.map(date => {
@@ -57,20 +57,20 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
           const today = isToday(date);
           return (
             <Box key={date.toISOString()} sx={{ backgroundColor: bg, borderRadius: 1, p: 1, textAlign: 'center', color: textColor, outline: today ? `2px solid ${theme.palette.primary.main}` : 'none', outlineOffset: '-2px' }}>
-              <Box sx={{ fontSize: '0.75rem', fontWeight: 600 }}>{formatDate(date)}</Box>
-              <Box sx={{ fontSize: '0.625rem', mt: '2px', opacity: 0.8 }}>{intensity > 0 ? `${intensity} ex` : ''}</Box>
+              <Box sx={{ fontSize: theme.typography.caption.fontSize, fontWeight: 600 }}>{formatDate(date)}</Box>
+              <Box sx={{ fontSize: theme.typography.labelMicro.fontSize, mt: '2px', opacity: 0.8 }}>{intensity > 0 ? `${intensity} ex` : ''}</Box>
             </Box>
           );
         })}
       </Box>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mt: 3 }}>
-        <Box component="span" sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>Less</Box>
+        <Box component="span" sx={{ fontSize: theme.typography.labelLg.fontSize, color: 'text.secondary' }}>Less</Box>
         <Box sx={{ display: 'flex', gap: 1 }}>
           {[0, 1, 2, 3, 4].map(level => (
             <Box key={level} sx={{ width: 24, height: 24, backgroundColor: colors[level], borderRadius: '6px' }} />
           ))}
         </Box>
-        <Box component="span" sx={{ fontSize: '0.8125rem', color: 'text.secondary' }}>More</Box>
+        <Box component="span" sx={{ fontSize: theme.typography.labelLg.fontSize, color: 'text.secondary' }}>More</Box>
       </Box>
     </Box>
   );

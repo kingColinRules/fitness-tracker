@@ -52,12 +52,12 @@ const BadgesModal: React.FC<BadgesModalProps> = ({ open, onClose, exercises, com
           {badges.map((badge, index) => (
             <Box key={index} sx={{ p: 2, borderRadius: 1, border: `2px solid ${badge.earned ? 'transparent' : theme.palette.divider}`, backgroundColor: badge.earned ? undefined : theme.palette.action.hover, color: badge.earned ? 'text.primary' : 'text.secondary' }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 1 }}>
-                <Box component="span" sx={{ fontSize: 28, opacity: !badge.earned ? 0.3 : 1 }}>{badge.icon}</Box>
+                <Box component="span" sx={{ fontSize: theme.typography.iconLg.fontSize, opacity: !badge.earned ? 0.3 : 1 }}>{badge.icon}</Box>
                 <Box sx={{ flex: 1 }}>
                   <Box sx={{ fontWeight: 700, fontSize: '1rem' }}>{badge.name}</Box>
-                  <Box sx={{ fontSize: '0.8125rem', mt: '6px' }}>{badge.progress} / {badge.target} {badge.name.includes('Day') ? 'days' : 'completions'}</Box>
+                  <Box sx={{ fontSize: theme.typography.labelLg.fontSize, mt: '6px' }}>{badge.progress} / {badge.target} {badge.name.includes('Day') ? 'days' : 'completions'}</Box>
                 </Box>
-                {badge.earned && <Box sx={{ fontSize: 20 }}>✓</Box>}
+                {badge.earned && <Box sx={{ fontSize: theme.typography.iconMd.fontSize }}>✓</Box>}
               </Box>
               <Box sx={{ width: '100%', height: 8, borderRadius: 1, backgroundColor: 'divider' }}>
                 <Box sx={{ height: '100%', borderRadius: 1, transition: 'width 300ms', backgroundColor: badge.earned ? 'success.main' : 'primary.main', width: `${Math.min((badge.progress / badge.target) * 100, 100)}%` }} />
