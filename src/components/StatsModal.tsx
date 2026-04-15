@@ -59,7 +59,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ open, onClose, exercises, compl
             <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'secondary.main' }}>By Category</Typography>
             {Object.entries(completionsByCategory).map(([cat, count]) => (
               <Box key={cat} sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                <Typography variant="body2" sx={{ textTransform: 'capitalize', color: 'text.secondary' }}>{cat}:</Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>{cat}:</Typography>
                 <Typography variant="body2" sx={{ fontWeight: 700, color: 'text.primary' }}>{count}</Typography>
               </Box>
             ))}

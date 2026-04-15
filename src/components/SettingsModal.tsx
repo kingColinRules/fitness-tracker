@@ -97,8 +97,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const saveEditCategory = () => {
-    if (editCategoryName && editingCategory !== editCategoryName) {
-      const newKey = editCategoryName.toLowerCase().replace(/\s+/g, '_');
+    const newKey = editCategoryName.trim();
+    if (newKey && editingCategory !== newKey) {
       if (!exercises[newKey]) {
         const newExercises: Record<string, string[]> = {};
         Object.keys(exercises).forEach(key => {
@@ -259,7 +259,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       </>
                     ) : (
                       <>
-                        <Typography sx={{ flex: 1, fontWeight: 600, textTransform: 'capitalize' }}>{category}</Typography>
+                        <Typography sx={{ flex: 1, fontWeight: 600 }}>{category}</Typography>
                         <IconButton onClick={() => startEditCategory(category)}><Edit2 size={18} /></IconButton>
                         <IconButton onClick={() => deleteCategory(category)}><Trash2 size={18} /></IconButton>
                       </>
@@ -276,7 +276,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {Object.keys(exercises).map(category => (
                   <Box key={category} sx={{ borderRadius: 1, p: 1.5, border: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}>
-                    <Typography sx={{ fontWeight: 700, textTransform: 'capitalize', mb: 1, color: 'text.primary' }}>{category}</Typography>
+                    <Typography sx={{ fontWeight: 700, mb: 1, color: 'text.primary' }}>{category}</Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       {exercises[category].length === 0 ? (
                         <Typography sx={{ color: 'text.secondary', fontStyle: 'italic' }}>No exercises</Typography>
@@ -314,7 +314,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 <Box key={category} sx={{ mb: 2, p: 2, borderRadius: 1, border: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                     <Checkbox checked={goalSettings[category]?.enabled ?? false} onChange={() => toggleGoalSetting(category)} size="small" />
-                    <Typography sx={{ fontWeight: 600, textTransform: 'capitalize', color: 'text.primary' }}>{category}</Typography>
+                    <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>{category}</Typography>
                   </Box>
                   {goalSettings[category]?.enabled && (
                     <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 2 }}>

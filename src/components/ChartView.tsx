@@ -72,7 +72,7 @@ const ChartView: React.FC<ChartViewProps> = ({
           />
           <Legend />
           {Object.keys(exercises).map((category, idx) => (
-            <Line key={category} type="monotone" dataKey={category} stroke={theme.palette.chartColors[idx % theme.palette.chartColors.length]} strokeWidth={2} />
+            <Line key={category} type="monotone" dataKey={category} name={category} stroke={theme.palette.chartColors[idx % theme.palette.chartColors.length]} strokeWidth={2} />
           ))}
         </LineChart>
       </ResponsiveContainer>

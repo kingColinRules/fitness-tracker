@@ -328,10 +328,9 @@ const ExerciseTracker = () => {
   };
 
   const addCategory = (name: string) => {
-    const categoryKey = name.toLowerCase().replace(/\s+/g, '_');
-    if (categoryKey && !exercises[categoryKey]) {
-      setExercises(prev => ({ ...prev, [categoryKey]: [] }));
-      setGoalSettings(prev => ({ ...prev, [categoryKey]: { enabled: true, required: 3 } }));
+    if (name && !exercises[name]) {
+      setExercises(prev => ({ ...prev, [name]: [] }));
+      setGoalSettings(prev => ({ ...prev, [name]: { enabled: true, required: 3 } }));
       setShowAddCategory(false);
     }
   };
