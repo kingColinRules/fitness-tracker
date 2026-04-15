@@ -20,7 +20,7 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import dayjs, { Dayjs } from 'dayjs';
 import { createAppTheme } from './theme';
-import { DEFAULT_EXERCISES } from './constants';
+import { APP_NAME, DEFAULT_EXERCISES } from './constants';
 
 import { generateDates, generateWeekDates, startOfWeek, formatDateKey, formatRange } from './utils/dateUtils';
 import { getStoredHandle, storeHandle, generateExportJSON } from './utils/fileSystem';
@@ -348,7 +348,7 @@ const ExerciseTracker = () => {
       <AppBar position="static" elevation={2}>
         <Toolbar disableGutters sx={{ px: 3 }}>
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 1200, mx: 'auto' }}>
-            <Typography variant="h4" sx={{ fontWeight: 700 }}>Fitness Tracker</Typography>
+            <Typography variant="h4" sx={{ fontWeight: 700 }}>{APP_NAME}</Typography>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
               <MuiTooltip title={hasUnsavedExport ? 'Click to export' : 'All saved'}>
                 <span>
