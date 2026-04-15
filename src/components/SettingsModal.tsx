@@ -9,6 +9,8 @@ import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Checkbox from '@mui/material/Checkbox';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
 import { useTheme } from '@mui/material/styles';
 import { getLastExportInfo } from '../utils/fileSystem';
 import { DEFAULT_EXERCISES } from '../constants';
@@ -47,6 +49,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   onOpenAddCategory, onOpenAddExercise,
   savedFileName, exportToJSON, importFromJSON,
 }) => {
+  const [activeTab, setActiveTab] = useState(0);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
   const [editingExercise, setEditingExercise] = useState<{ category: string; name: string } | null>(null);
@@ -225,70 +228,24 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   return (
     <Modal open={open} onClose={onClose}>
-      <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', borderRadius: 2, boxShadow: 6, width: 'calc(100% - 32px)', maxWidth: 960, display: 'flex', flexDirection: 'column', backgroundColor: 'background.paper', color: 'text.primary', maxHeight: '90vh' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 3, borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
+      <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', borderRadius: 2, boxShadow: 6, width: 'calc(100% - 32px)', maxWidth: 960, display: 'flex', flexDirection: 'column', backgroundColor: 'background.paper', color: 'text.primary', height: '90vh' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 3, pb: 0, flexShrink: 0 }}>
           <Typography variant="h5" sx={{ fontWeight: 700 }}>Settings</Typography>
           <IconButton onClick={onClose} sx={{ p: 1 }}><X size={24} /></IconButton>
         </Box>
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
+          <Tabs value={activeTab} onChange={(_e, val) => setActiveTab(val)} sx={{ px: 3 }}>
+            <Tab label="Exercises" />
+            <Tab label="Appearance" />
+            <Tab label="Data and Backup" />
+          </Tabs>
+        </Box>
         <Box sx={{ overflowY: 'auto', p: 3, flex: 1 }}>
-          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-
-            {/* Appearance */}
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Appearance</Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
-                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Theme</Typography>
-                <ToggleButtonGroup color="primary" value={darkMode ? 'dark' : 'light'} exclusive onChange={(_e, val) => { if (val) setDarkMode(val === 'dark'); }} size="small">
-                  <ToggleButton value="light">Light Mode</ToggleButton>
-                  <ToggleButton value="dark">Dark Mode</ToggleButton>
-                </ToggleButtonGroup>
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1, mt: 1 }}>
-                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Density</Typography>
-                <ToggleButtonGroup color="primary" value={compactView ? 'compact' : 'normal'} exclusive onChange={(_e, val) => { if (val) setCompactView(val === 'compact'); }} size="small">
-                  <ToggleButton value="normal">Normal</ToggleButton>
-                  <ToggleButton value="compact">Compact</ToggleButton>
-                </ToggleButtonGroup>
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1, mt: 1 }}>
-                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Default Calendar View</Typography>
-                <ToggleButtonGroup color="primary" value={defaultChartMode} exclusive onChange={(_e, val) => { if (val) { setDefaultChartMode(val); setChartMode(val); } }} size="small">
-                  <ToggleButton value="weekly">Week</ToggleButton>
-                  <ToggleButton value="monthly">Month</ToggleButton>
-                </ToggleButtonGroup>
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1, mt: 1 }}>
-                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Week Starts On</Typography>
-                <ToggleButtonGroup color="primary" value={weekStartDay} exclusive onChange={(_e, val) => { if (val !== null) setWeekStartDay(val); }} size="small">
-                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((label, i) => (
-                    <ToggleButton key={i} value={i}>{label}</ToggleButton>
-                  ))}
-                </ToggleButtonGroup>
-              </Box>
-            </Box>
-
-            {/* Data & Backup */}
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Data & Backup</Typography>
-              <Box sx={{ p: 1.5, borderRadius: 1, mb: 1, backgroundColor: 'action.hover' }}>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}><strong>Last export:</strong> {getLastExportInfo()}</Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                  <strong>Save file:</strong> {savedFileName ?? 'Not set — click Export to choose'}
-                </Typography>
-              </Box>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button onClick={exportToJSON} variant="contained" color="success" startIcon={<Download size={18} />}>Export</Button>
-                <Button component="label" variant="contained" color="secondary" startIcon={<Upload size={18} />}>
-                  Import
-                  <input type="file" accept=".json" onChange={importFromJSON} hidden />
-                </Button>
-              </Box>
-              <Button onClick={handleClearData} variant="contained" color="error" sx={{ mt: 2 }}>Clear All Data</Button>
-            </Box>
+          <Box sx={{ display: activeTab === 0 ? 'flex' : 'none', flexDirection: 'column', gap: 3 }}>
 
             {/* Manage Categories */}
             <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Manage Categories</Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Categories</Typography>
               <Button onClick={onOpenAddCategory} variant="contained" startIcon={<Plus size={18} />} sx={{ mb: 1 }}>Add Category</Button>
               <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {Object.keys(exercises).map(category => (
@@ -314,7 +271,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
             {/* Manage Exercises */}
             <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Manage Exercises</Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Exercises</Typography>
               <Button onClick={onOpenAddExercise} variant="contained" startIcon={<Plus size={18} />} sx={{ mb: 1 }}>Add Exercise</Button>
               <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {Object.keys(exercises).map(category => (
@@ -370,6 +327,57 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             </Box>
 
           </Box>
+          {activeTab === 1 && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
+                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Theme</Typography>
+                <ToggleButtonGroup color="primary" value={darkMode ? 'dark' : 'light'} exclusive onChange={(_e, val) => { if (val) setDarkMode(val === 'dark'); }} size="small">
+                  <ToggleButton value="light">Light Mode</ToggleButton>
+                  <ToggleButton value="dark">Dark Mode</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
+                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Density</Typography>
+                <ToggleButtonGroup color="primary" value={compactView ? 'compact' : 'normal'} exclusive onChange={(_e, val) => { if (val) setCompactView(val === 'compact'); }} size="small">
+                  <ToggleButton value="normal">Normal</ToggleButton>
+                  <ToggleButton value="compact">Compact</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
+                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Default Calendar View</Typography>
+                <ToggleButtonGroup color="primary" value={defaultChartMode} exclusive onChange={(_e, val) => { if (val) { setDefaultChartMode(val); setChartMode(val); } }} size="small">
+                  <ToggleButton value="weekly">Week</ToggleButton>
+                  <ToggleButton value="monthly">Month</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
+                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Week Starts On</Typography>
+                <ToggleButtonGroup color="primary" value={weekStartDay} exclusive onChange={(_e, val) => { if (val !== null) setWeekStartDay(val); }} size="small">
+                  {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((label, i) => (
+                    <ToggleButton key={i} value={i}>{label}</ToggleButton>
+                  ))}
+                </ToggleButtonGroup>
+              </Box>
+            </Box>
+          )}
+          {activeTab === 2 && (
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box sx={{ p: 1.5, borderRadius: 1, backgroundColor: 'action.hover' }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}><strong>Last export:</strong> {getLastExportInfo()}</Typography>
+                <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                  <strong>Save file:</strong> {savedFileName ?? 'Not set — click Export to choose'}
+                </Typography>
+              </Box>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                <Button onClick={exportToJSON} variant="contained" color="success" startIcon={<Download size={18} />}>Export</Button>
+                <Button component="label" variant="contained" color="secondary" startIcon={<Upload size={18} />}>
+                  Import
+                  <input type="file" accept=".json" onChange={importFromJSON} hidden />
+                </Button>
+              </Box>
+              <Button onClick={handleClearData} variant="contained" color="error" sx={{ alignSelf: 'flex-start' }}>Clear All Data</Button>
+            </Box>
+          )}
         </Box>
         <Box sx={{ p: 3, borderTop: 1, borderColor: 'divider', flexShrink: 0 }}>
           <Button onClick={onClose} variant="contained" color="primary" fullWidth>Done</Button>

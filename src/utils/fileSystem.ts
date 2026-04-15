@@ -55,8 +55,10 @@ export function generateExportJSON(
 export function getLastExportInfo(): string {
   const lastExport = localStorage.getItem('lastExportDate');
   if (!lastExport) return 'Never';
-  const daysAgo = Math.floor((Date.now() - new Date(lastExport).getTime()) / (1000 * 60 * 60 * 24));
-  if (daysAgo === 0) return 'Today';
-  if (daysAgo === 1) return 'Yesterday';
-  return `${daysAgo} days ago`;
+  const date = new Date(lastExport);
+  const time = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  const daysAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysAgo === 0) return `Today at ${time}`;
+  if (daysAgo === 1) return `Yesterday at ${time}`;
+  return `${daysAgo} days ago at ${time}`;
 }
