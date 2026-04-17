@@ -10,6 +10,7 @@ import TableCell from '@mui/material/TableCell';
 import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
+import Typography from '@mui/material/Typography';
 import { useTheme, alpha } from '@mui/material/styles';
 import dayjs from 'dayjs';
 import { formatDateKey, isToday, isFutureDate, startOfWeek } from '../utils/dateUtils';
@@ -19,6 +20,7 @@ interface ExerciseTableProps {
   exercises: Record<string, string[]>;
   completions: Record<string, boolean>;
   goalSettings: Record<string, { enabled: boolean; required: number }>;
+  exerciseDescriptions: Record<string, string>;
   tableDates: Date[];
   chartMode: 'weekly' | 'monthly';
   compactView: boolean;
@@ -33,6 +35,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
   exercises,
   completions,
   goalSettings,
+  exerciseDescriptions,
   tableDates,
   chartMode,
   compactView,
@@ -100,6 +103,11 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                   <TableRow key={exercise}>
                     <TableCell sx={{ fontWeight: 500, position: 'sticky', left: 0, zIndex: 70, backgroundColor: rowBg, color: 'text.primary' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>{exercise}</Box>
+                      {!compactView && exerciseDescriptions[`${category}-${exercise}`] && (
+                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.3, mt: 0.25 }}>
+                          {exerciseDescriptions[`${category}-${exercise}`]}
+                        </Typography>
+                      )}
                     </TableCell>
                     <TableCell title={showProgress ? `${weeklyCount} / ${requiredCount}` : undefined} sx={{ position: 'sticky', left: `${exerciseColumnWidth}px`, zIndex: 60, textAlign: 'center', backgroundColor: rowBg, px: 1 }}>
                       {showProgress && (

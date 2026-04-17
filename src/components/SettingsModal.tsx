@@ -33,6 +33,8 @@ interface SettingsModalProps {
   setCompletions: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   goalSettings: Record<string, { enabled: boolean; required: number }>;
   setGoalSettings: React.Dispatch<React.SetStateAction<Record<string, { enabled: boolean; required: number }>>>;
+  exerciseDescriptions: Record<string, string>;
+  setExerciseDescriptions: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   onOpenAddCategory: () => void;
   onOpenAddExercise: () => void;
   hasUnsavedExport: boolean;
@@ -46,6 +48,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   darkMode, setDarkMode, compactView, setCompactView, defaultChartMode, setDefaultChartMode,
   weekStartDay, setWeekStartDay, setChartMode,
   exercises, setExercises, completions, setCompletions, goalSettings, setGoalSettings,
+  exerciseDescriptions, setExerciseDescriptions,
   onOpenAddCategory, onOpenAddExercise,
   savedFileName, exportToJSON, importFromJSON,
 }) => {
@@ -54,6 +57,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [editCategoryName, setEditCategoryName] = useState('');
   const [editingExercise, setEditingExercise] = useState<{ category: string; name: string } | null>(null);
   const [editExerciseName, setEditExerciseName] = useState('');
+  const [editExerciseDescription, setEditExerciseDescription] = useState('');
   const [draggedItem, setDraggedItem] = useState<{ category: string; index: number } | null>(null);
   const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
   const theme = useTheme();
@@ -119,6 +123,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           }
         });
         setCompletions(newCompletions);
+        const newDescriptions: Record<string, string> = {};
+        Object.keys(exerciseDescriptions).forEach(key => {
+          if (key.startsWith(`${editingCategory}-`)) {
+            newDescriptions[key.replace(`${editingCategory}-`, `${newKey}-`)] = exerciseDescriptions[key];
+          } else {
+            newDescriptions[key] = exerciseDescriptions[key];
+          }
+        });
+        setExerciseDescriptions(newDescriptions);
       }
     }
     setEditingCategory(null);
@@ -138,37 +151,53 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         if (key.startsWith(`${category}-`)) delete newCompletions[key];
       });
       setCompletions(newCompletions);
+      const newDescriptions = { ...exerciseDescriptions };
+      Object.keys(newDescriptions).forEach(key => {
+        if (key.startsWith(`${category}-`)) delete newDescriptions[key];
+      });
+      setExerciseDescriptions(newDescriptions);
     }
   };
 
   const startEditExercise = (category: string, exerciseName: string) => {
     setEditingExercise({ category, name: exerciseName });
     setEditExerciseName(exerciseName);
+    setEditExerciseDescription(exerciseDescriptions[`${category}-${exerciseName}`] || '');
   };
 
   const saveEditExercise = () => {
-    if (editExerciseName && editingExercise && editExerciseName !== editingExercise.name) {
+    if (editingExercise) {
       const { category, name: oldName } = editingExercise;
-      if (!exercises[category].includes(editExerciseName)) {
+      const newName = editExerciseName.trim() || oldName;
+      if (newName !== oldName && !exercises[category].includes(newName)) {
         const newExercises = { ...exercises };
         const index = newExercises[category].indexOf(oldName);
-        if (index !== -1) {
-          newExercises[category][index] = editExerciseName;
-          setExercises(newExercises);
-        }
+        if (index !== -1) newExercises[category][index] = newName;
+        setExercises(newExercises);
         const newCompletions: Record<string, boolean> = {};
         Object.keys(completions).forEach(key => {
           if (key.startsWith(`${category}-${oldName}-`)) {
-            newCompletions[key.replace(`${category}-${oldName}-`, `${category}-${editExerciseName}-`)] = completions[key];
+            newCompletions[key.replace(`${category}-${oldName}-`, `${category}-${newName}-`)] = completions[key];
           } else {
             newCompletions[key] = completions[key];
           }
         });
         setCompletions(newCompletions);
       }
+      const newDescriptions = { ...exerciseDescriptions };
+      const oldKey = `${category}-${oldName}`;
+      const newKey = `${category}-${newName}`;
+      if (oldKey !== newKey) delete newDescriptions[oldKey];
+      if (editExerciseDescription.trim()) {
+        newDescriptions[newKey] = editExerciseDescription.trim();
+      } else {
+        delete newDescriptions[newKey];
+      }
+      setExerciseDescriptions(newDescriptions);
     }
     setEditingExercise(null);
     setEditExerciseName('');
+    setEditExerciseDescription('');
   };
 
   const deleteExercise = (category: string, exerciseName: string) => {
@@ -179,6 +208,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         if (key.includes(`${category}-${exerciseName}-`)) delete newCompletions[key];
       });
       setCompletions(newCompletions);
+      const newDescriptions = { ...exerciseDescriptions };
+      delete newDescriptions[`${category}-${exerciseName}`];
+      setExerciseDescriptions(newDescriptions);
     }
   };
 
@@ -223,6 +255,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       localStorage.clear();
       setCompletions({});
       setExercises(DEFAULT_EXERCISES);
+      setExerciseDescriptions({});
     }
   };
 
@@ -282,17 +315,29 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <Typography sx={{ color: 'text.secondary', fontStyle: 'italic' }}>No exercises</Typography>
                       ) : (
                         exercises[category].map((exercise, index) => (
-                          <Box key={exercise} draggable onDragStart={(e) => handleDragStart(e, category, index)} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, category, index)} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: 'action.hover' } }} style={{ cursor: 'grab' }}>
-                            <GripVertical style={{ color: theme.palette.text.secondary }} size={compactView ? 12 : 16} />
+                          <Box key={exercise} draggable onDragStart={(e) => handleDragStart(e, category, index)} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, category, index)} sx={{ display: 'flex', alignItems: editingExercise?.category === category && editingExercise?.name === exercise ? 'flex-start' : 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: 'action.hover' } }} style={{ cursor: 'grab' }}>
+                            <GripVertical style={{ color: theme.palette.text.secondary, marginTop: editingExercise?.category === category && editingExercise?.name === exercise ? 6 : 0 }} size={compactView ? 12 : 16} />
                             {editingExercise?.category === category && editingExercise?.name === exercise ? (
                               <>
-                                <TextField value={editExerciseName} onChange={(e) => setEditExerciseName(e.target.value)} size="small" sx={{ flex: 1 }} />
-                                <Button onClick={saveEditExercise} variant="contained" size="small">Save</Button>
-                                <Button onClick={() => { setEditingExercise(null); setEditExerciseName(''); }} variant="outlined" size="small">Cancel</Button>
+                                <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
+                                  <TextField value={editExerciseName} onChange={(e) => setEditExerciseName(e.target.value)} size="small" placeholder="Exercise name" fullWidth />
+                                  <TextField value={editExerciseDescription} onChange={(e) => setEditExerciseDescription(e.target.value)} size="small" placeholder="Description (optional)" multiline rows={2} fullWidth />
+                                </Box>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                  <Button onClick={saveEditExercise} variant="contained" size="small">Save</Button>
+                                  <Button onClick={() => { setEditingExercise(null); setEditExerciseName(''); setEditExerciseDescription(''); }} variant="outlined" size="small">Cancel</Button>
+                                </Box>
                               </>
                             ) : (
                               <>
-                                <Typography sx={{ flex: 1 }}>{exercise}</Typography>
+                                <Box sx={{ flex: 1 }}>
+                                  <Typography>{exercise}</Typography>
+                                  {exerciseDescriptions[`${category}-${exercise}`] && (
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                                      {exerciseDescriptions[`${category}-${exercise}`]}
+                                    </Typography>
+                                  )}
+                                </Box>
                                 <IconButton onClick={() => startEditExercise(category, exercise)}><Edit2 size={16} /></IconButton>
                                 <IconButton onClick={() => deleteExercise(category, exercise)}><Trash2 size={16} /></IconButton>
                               </>

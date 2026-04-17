@@ -106,6 +106,13 @@ const ExerciseTracker = () => {
     } catch { /* ignore */ }
     return {};
   });
+  const [exerciseDescriptions, setExerciseDescriptions] = useState<Record<string, string>>(() => {
+    try {
+      const s = localStorage.getItem('exerciseDescriptions');
+      if (s) return JSON.parse(s);
+    } catch { /* ignore */ }
+    return {};
+  });
 
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const exerciseHeaderRef = useRef<HTMLTableCellElement>(null);
@@ -169,6 +176,15 @@ const ExerciseTracker = () => {
       console.error('Storage error:', e);
     }
   }, [exercises]);
+
+  // Persist descriptions
+  useEffect(() => {
+    try {
+      localStorage.setItem('exerciseDescriptions', JSON.stringify(exerciseDescriptions));
+    } catch (e) {
+      console.error('Storage error:', e);
+    }
+  }, [exerciseDescriptions]);
 
   // Persist settings
   useEffect(() => {
@@ -234,7 +250,7 @@ const ExerciseTracker = () => {
   };
 
   const writeJSON = async (handle: FileSystemFileHandle) => {
-    const json = generateExportJSON(exercises, completions, goalSettings);
+    const json = generateExportJSON(exercises, completions, goalSettings, exerciseDescriptions);
     const writable = await handle.createWritable();
     await writable.write(json);
     await writable.close();
@@ -243,7 +259,7 @@ const ExerciseTracker = () => {
   };
 
   const exportToJSON = async () => {
-    const json = generateExportJSON(exercises, completions, goalSettings);
+    const json = generateExportJSON(exercises, completions, goalSettings, exerciseDescriptions);
     if (!('showSaveFilePicker' in window)) {
       const blob = new Blob([json], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
@@ -313,10 +329,12 @@ const ExerciseTracker = () => {
         exercises: Record<string, string[]>;
         completions: Record<string, boolean>;
         goalSettings?: Record<string, { enabled: boolean; required: number }>;
+        exerciseDescriptions?: Record<string, string>;
       };
       setExercises(data.exercises);
       setCompletions(data.completions);
       if (data.goalSettings) setGoalSettings(data.goalSettings);
+      if (data.exerciseDescriptions) setExerciseDescriptions(data.exerciseDescriptions);
       setHasUnsavedExport(true);
       setImportFeedback({
         open: true,
@@ -424,6 +442,7 @@ const ExerciseTracker = () => {
               exercises={exercises}
               completions={completions}
               goalSettings={goalSettings}
+              exerciseDescriptions={exerciseDescriptions}
               tableDates={tableDates}
               chartMode={chartMode}
               compactView={compactView}
@@ -478,6 +497,8 @@ const ExerciseTracker = () => {
         setCompletions={setCompletions}
         goalSettings={goalSettings}
         setGoalSettings={setGoalSettings}
+        exerciseDescriptions={exerciseDescriptions}
+        setExerciseDescriptions={setExerciseDescriptions}
         onOpenAddCategory={() => setShowAddCategory(true)}
         onOpenAddExercise={() => setShowAddExercise(true)}
         hasUnsavedExport={hasUnsavedExport}
