@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import confetti from 'canvas-confetti';
 import { Check } from 'lucide-react';
 import TableContainer from '@mui/material/TableContainer';
@@ -11,6 +11,8 @@ import Paper from '@mui/material/Paper';
 import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+import Popover from '@mui/material/Popover';
+import TextField from '@mui/material/TextField';
 import { useTheme, alpha } from '@mui/material/styles';
 import dayjs from 'dayjs';
 import { formatDateKey, isToday, isFutureDate, startOfWeek } from '../utils/dateUtils';
@@ -29,6 +31,7 @@ interface ExerciseTableProps {
   tableWrapperRef: React.RefObject<HTMLDivElement>;
   exerciseHeaderRef: React.RefObject<HTMLTableCellElement>;
   toggleCompletion: (category: string, exercise: string, dateStr: string) => void;
+  onUpdateDescription: (category: string, exercise: string, description: string) => void;
 }
 
 const ExerciseTable: React.FC<ExerciseTableProps> = ({
@@ -44,9 +47,26 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
   tableWrapperRef,
   exerciseHeaderRef,
   toggleCompletion,
+  onUpdateDescription,
 }) => {
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
+
+  const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null);
+  const [popoverExercise, setPopoverExercise] = useState<{ category: string; name: string } | null>(null);
+  const [popoverDesc, setPopoverDesc] = useState('');
+
+  const openDescriptionPopover = (e: React.MouseEvent<HTMLElement>, category: string, exercise: string) => {
+    setPopoverAnchor(e.currentTarget);
+    setPopoverExercise({ category, name: exercise });
+    setPopoverDesc(exerciseDescriptions[`${category}-${exercise}`] || '');
+  };
+
+  const closePopover = () => {
+    setPopoverAnchor(null);
+    setPopoverExercise(null);
+    setPopoverDesc('');
+  };
 
   const headerBg = theme.palette.action.hover;
   const categoryBg = isDark ? theme.palette.background.default : alpha(theme.palette.primary.light, 0.13);
@@ -74,6 +94,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
   };
 
   return (
+    <>
     <TableContainer ref={tableWrapperRef} component={Paper} sx={{ borderRadius: 2, boxShadow: 2, overflowX: 'auto' }}>
       <Table sx={{ width: '100%', borderCollapse: 'collapse' }} size={compactView ? 'small' : 'medium'}>
         <TableHead>
@@ -103,9 +124,13 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                   <TableRow key={exercise}>
                     <TableCell sx={{ fontWeight: 500, position: 'sticky', left: 0, zIndex: 70, backgroundColor: rowBg, color: 'text.primary' }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>{exercise}</Box>
-                      {!compactView && exerciseDescriptions[`${category}-${exercise}`] && (
-                        <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', lineHeight: 1.3, mt: 0.25 }}>
-                          {exerciseDescriptions[`${category}-${exercise}`]}
+                      {!compactView && (
+                        <Typography
+                          variant="caption"
+                          onClick={(e) => openDescriptionPopover(e, category, exercise)}
+                          sx={{ color: exerciseDescriptions[`${category}-${exercise}`] ? 'text.secondary' : 'text.disabled', display: 'block', lineHeight: 1.3, mt: 0.25, cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
+                        >
+                          {exerciseDescriptions[`${category}-${exercise}`] || 'Add description…'}
                         </Typography>
                       )}
                     </TableCell>
@@ -170,6 +195,33 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
         </TableBody>
       </Table>
     </TableContainer>
+
+    <Popover
+      open={Boolean(popoverAnchor)}
+      anchorEl={popoverAnchor}
+      onClose={closePopover}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
+      transformOrigin={{ vertical: 'top', horizontal: 'left' }}
+    >
+      <Box sx={{ p: 2.5, width: 360 }}>
+        <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>{popoverExercise?.name}</Typography>
+        <TextField
+          value={popoverDesc}
+          onChange={(e) => setPopoverDesc(e.target.value)}
+          multiline
+          rows={5}
+          fullWidth
+          size="small"
+          placeholder="Add a description..."
+          autoFocus
+        />
+        <Box sx={{ display: 'flex', gap: 1, mt: 1.5, justifyContent: 'flex-end' }}>
+          <Button size="small" onClick={closePopover}>Cancel</Button>
+          <Button size="small" variant="contained" onClick={() => { if (popoverExercise) onUpdateDescription(popoverExercise.category, popoverExercise.name, popoverDesc.trim()); closePopover(); }}>Save</Button>
+        </Box>
+      </Box>
+    </Popover>
+    </>
   );
 };
 

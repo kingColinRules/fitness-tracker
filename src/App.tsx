@@ -451,6 +451,16 @@ const ExerciseTracker = () => {
               tableWrapperRef={tableWrapperRef}
               exerciseHeaderRef={exerciseHeaderRef}
               toggleCompletion={toggleCompletion}
+              onUpdateDescription={(category, exercise, description) => {
+                setExerciseDescriptions(prev => {
+                  const key = `${category}-${exercise}`;
+                  const next = { ...prev };
+                  if (description) next[key] = description;
+                  else delete next[key];
+                  return next;
+                });
+                setHasUnsavedExport(true);
+              }}
             />
           )}
 
