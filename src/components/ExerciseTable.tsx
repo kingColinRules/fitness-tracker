@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import confetti from 'canvas-confetti';
 import { Check } from 'lucide-react';
 import TableContainer from '@mui/material/TableContainer';
@@ -15,7 +15,7 @@ import Popover from '@mui/material/Popover';
 import TextField from '@mui/material/TextField';
 import { useTheme, alpha } from '@mui/material/styles';
 import dayjs from 'dayjs';
-import { formatDateKey, isToday, isFutureDate, startOfWeek } from '../utils/dateUtils';
+import { formatDateKey, isToday, isFutureDate } from '../utils/dateUtils';
 import { isCompleted as isCompletedUtil } from '../utils/completionUtils';
 
 interface ExerciseTableProps {
@@ -72,26 +72,30 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
   const categoryBg = isDark ? theme.palette.background.default : alpha(theme.palette.primary.light, 0.13);
   const rowBg = theme.palette.background.paper;
 
+  const weekBandMap = useMemo(() => {
+    const map = new Map<string, number>();
+    let band = 0;
+    tableDates.forEach((d, i) => {
+      if (i > 0 && d.getDay() === weekStartDay) band++;
+      map.set(formatDateKey(d), band);
+    });
+    return map;
+  }, [tableDates, weekStartDay]);
+
+  const weekTint = (date: Date) => {
+    if (chartMode !== 'monthly') return undefined;
+    return (weekBandMap.get(formatDateKey(date)) ?? 0) % 2 === 1
+      ? alpha(theme.palette.text.primary, 0.06)
+      : undefined;
+  };
+
   const isCompleted = (category: string, exercise: string, dateStr: string): boolean =>
     isCompletedUtil(completions, category, exercise, dateStr);
 
-  const calculateWeeklyCount = (category: string, exercise: string): number => {
-    if (chartMode === 'weekly') {
-      return tableDates.filter(date =>
-        !isFutureDate(date) && isCompleted(category, exercise, formatDateKey(date))
-      ).length;
-    }
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const weekStart = startOfWeek(today, weekStartDay);
-    let count = 0;
-    const checkDate = new Date(today);
-    while (checkDate >= weekStart) {
-      if (isCompleted(category, exercise, formatDateKey(checkDate))) count++;
-      checkDate.setDate(checkDate.getDate() - 1);
-    }
-    return count;
-  };
+  const calculateWeeklyCount = (category: string, exercise: string): number =>
+    tableDates.filter(date =>
+      !isFutureDate(date) && isCompleted(category, exercise, formatDateKey(date))
+    ).length;
 
   return (
     <>
@@ -99,10 +103,10 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
       <Table sx={{ width: '100%', borderCollapse: 'collapse' }} size={compactView ? 'small' : 'medium'}>
         <TableHead>
           <TableRow sx={{ backgroundColor: headerBg }}>
-            <TableCell ref={exerciseHeaderRef} sx={{ fontWeight: 600, position: 'sticky', left: 0, zIndex: 70, minWidth: 120, backgroundColor: headerBg, color: 'text.primary' }}>Exercise</TableCell>
-            <TableCell sx={{ fontWeight: 600, position: 'sticky', left: `${exerciseColumnWidth}px`, zIndex: 60, textAlign: 'center', minWidth: 80, backgroundColor: headerBg, color: 'text.primary' }}>Progress</TableCell>
+            <TableCell ref={exerciseHeaderRef} sx={{ fontWeight: 600, position: 'sticky', left: 0, zIndex: 70, minWidth: chartMode === 'weekly' ? 160 : 100, backgroundColor: headerBg, color: 'text.primary' }}>Exercise</TableCell>
+            <TableCell sx={{ fontWeight: 600, position: 'sticky', left: `${exerciseColumnWidth}px`, zIndex: 60, textAlign: 'center', minWidth: 44, backgroundColor: headerBg, color: 'text.primary' }}>Goal</TableCell>
             {tableDates.map(date => (
-              <TableCell key={date.toISOString()} data-date={formatDateKey(date)} align="center" sx={{ fontWeight: 600, minWidth: chartMode === 'weekly' ? 80 : 24, borderColor: 'divider', backgroundColor: undefined, borderBottom: isToday(date) ? `3px solid ${theme.palette.primary.main}` : undefined, color: 'text.primary', lineHeight: 1.2, px: 0.25 }}>
+              <TableCell key={date.toISOString()} data-date={formatDateKey(date)} align="center" sx={{ fontWeight: 600, minWidth: chartMode === 'weekly' ? 80 : 24, borderColor: 'divider', backgroundColor: weekTint(date), borderBottom: isToday(date) ? `3px solid ${theme.palette.primary.main}` : undefined, color: 'text.primary', lineHeight: 1.2, px: 0.25 }}>
                 <Box sx={{ fontSize: theme.typography.labelXs.fontSize, opacity: 0.7 }}>{dayjs(date).format('ddd')}</Box>
                 <Box sx={{ fontSize: theme.typography.caption.fontSize }}>{chartMode === 'weekly' ? dayjs(date).format('DD MMM') : String(date.getDate()).padStart(2, '0')}</Box>
               </TableCell>
@@ -118,17 +122,20 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
               </TableRow>
               {exerciseList.map((exercise) => {
                 const weeklyCount = calculateWeeklyCount(category, exercise);
-                const requiredCount = goalSettings[category]?.required || 3;
+                const weeklyRequired = goalSettings[category]?.required || 3;
+                const requiredCount = chartMode === 'monthly'
+                  ? weeklyRequired * Math.round(tableDates.length / 7)
+                  : weeklyRequired;
                 const showProgress = goalSettings[category]?.enabled;
                 return (
                   <TableRow key={exercise}>
-                    <TableCell sx={{ fontWeight: 500, position: 'sticky', left: 0, zIndex: 70, backgroundColor: rowBg, color: 'text.primary' }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>{exercise}</Box>
+                    <TableCell sx={{ fontWeight: 500, position: 'sticky', left: 0, zIndex: 70, backgroundColor: rowBg, color: 'text.primary', maxWidth: chartMode === 'weekly' ? 200 : 130, pr: 0.5 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exercise}</Box>
                       {!compactView && (
                         <Typography
                           variant="caption"
                           onClick={(e) => openDescriptionPopover(e, category, exercise)}
-                          sx={{ color: exerciseDescriptions[`${category}-${exercise}`] ? 'text.secondary' : 'text.disabled', display: 'block', lineHeight: 1.3, mt: 0.25, cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
+                          sx={{ color: exerciseDescriptions[`${category}-${exercise}`] ? 'text.secondary' : 'text.disabled', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3, mt: 0.25, cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
                         >
                           {exerciseDescriptions[`${category}-${exercise}`] || 'Add description…'}
                         </Typography>
@@ -137,7 +144,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                     <TableCell title={showProgress ? `${weeklyCount} / ${requiredCount}` : undefined} sx={{ position: 'sticky', left: `${exerciseColumnWidth}px`, zIndex: 60, textAlign: 'center', backgroundColor: rowBg, px: 1 }}>
                       {showProgress && (
                         <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
-                          <Box sx={{ width: compactView ? 28 : 36, height: compactView ? 4 : 6, borderRadius: 99, backgroundColor: 'divider', overflow: 'hidden' }}>
+                          <Box sx={{ width: compactView ? 24 : 28, height: compactView ? 4 : 6, borderRadius: 99, backgroundColor: 'divider', overflow: 'hidden' }}>
                             <Box sx={{ height: '100%', width: `${Math.min(weeklyCount / requiredCount, 1) * 100}%`, borderRadius: 99, backgroundColor: weeklyCount >= requiredCount ? 'success.main' : 'warning.main', transition: 'width 0.3s ease' }} />
                           </Box>
                           <Box sx={{ fontSize: theme.typography.labelMicro.fontSize, color: 'text.secondary', lineHeight: 1 }}>{weeklyCount}/{requiredCount}</Box>
@@ -149,7 +156,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                       const completed = isCompleted(category, exercise, dateStr);
                       const isFuture = isFutureDate(date);
                       return (
-                        <TableCell key={date.toISOString()} data-date-cell align="center" sx={{ borderColor: 'divider', backgroundColor: undefined, px: 0.5, py: 0.5 }}>
+                        <TableCell key={date.toISOString()} data-date-cell align="center" sx={{ borderColor: 'divider', backgroundColor: weekTint(date), px: chartMode === 'monthly' ? 0.25 : 0.5, py: 0.5 }}>
                           <Button
                             onClick={(e) => {
                               if (isFuture) return;
@@ -172,7 +179,8 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                             size={compactView ? 'small' : 'medium'}
                             sx={{
                               borderRadius: 1,
-                              minHeight: compactView ? 32 : 44,
+                              minHeight: chartMode === 'monthly' ? (compactView ? 24 : 32) : (compactView ? 32 : 44),
+                              minWidth: 0,
                               py: 0,
                               backgroundColor: isFuture
                                 ? theme.palette.action.disabledBackground
@@ -182,7 +190,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                               '&:hover': { backgroundColor: completed ? 'success.dark' : undefined },
                             }}
                           >
-                            {completed ? <Check color={theme.palette.primary.contrastText} size={compactView ? 14 : 20} /> : null}
+                            {completed && chartMode !== 'monthly' ? <Check color={theme.palette.primary.contrastText} size={compactView ? 14 : 20} /> : null}
                           </Button>
                         </TableCell>
                       );

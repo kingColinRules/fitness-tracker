@@ -156,7 +156,7 @@ const ExerciseTracker = () => {
       window.removeEventListener('resize', measure);
       ro?.disconnect();
     };
-  }, [compactView, selectedMonth, selectedYear]);
+  }, [compactView, selectedMonth, selectedYear, chartMode]);
 
   // Persist completions
   useEffect(() => {
