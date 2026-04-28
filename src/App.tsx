@@ -428,7 +428,7 @@ const ExerciseTracker = () => {
               <IconButton ref={calendarAnchorRef} size="small" color="inherit" onClick={() => setPickerOpen(true)}>
                 <CalendarMonthIcon fontSize="small" />
               </IconButton>
-              <ToggleButtonGroup color="primary" value={chartMode} exclusive onChange={(_e, val) => { if (val) setChartMode(val); }} size="small" aria-label="Chart Mode">
+              <ToggleButtonGroup color="primary" value={chartMode} exclusive onChange={(_e, val) => { if (val) { setExerciseColumnWidth(val === 'weekly' ? 160 : 100); setChartMode(val); } }} size="small" aria-label="Chart Mode">
                 <ToggleButton value="weekly">Week</ToggleButton>
                 <ToggleButton value="monthly">Month</ToggleButton>
               </ToggleButtonGroup>

@@ -99,14 +99,14 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
 
   return (
     <>
-    <TableContainer ref={tableWrapperRef} component={Paper} sx={{ borderRadius: 2, boxShadow: 2, overflowX: 'auto' }}>
-      <Table sx={{ width: '100%', borderCollapse: 'collapse' }} size={compactView ? 'small' : 'medium'}>
+    <TableContainer ref={tableWrapperRef} component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
+      <Table sx={{ width: '100%' }} size={compactView ? 'small' : 'medium'}>
         <TableHead>
           <TableRow sx={{ backgroundColor: headerBg }}>
-            <TableCell ref={exerciseHeaderRef} sx={{ fontWeight: 600, position: 'sticky', left: 0, zIndex: 70, minWidth: chartMode === 'weekly' ? 160 : 100, backgroundColor: headerBg, color: 'text.primary' }}>Exercise</TableCell>
-            <TableCell sx={{ fontWeight: 600, position: 'sticky', left: `${exerciseColumnWidth}px`, zIndex: 60, textAlign: 'center', minWidth: 44, backgroundColor: headerBg, color: 'text.primary' }}>Goal</TableCell>
+            <TableCell ref={exerciseHeaderRef} sx={{ position: 'sticky', left: 0, zIndex: 70, minWidth: chartMode === 'weekly' ? 160 : 100, backgroundColor: headerBg, color: 'text.primary' }}>Exercise</TableCell>
+            <TableCell sx={{ position: 'sticky', left: `${exerciseColumnWidth}px`, zIndex: 60, textAlign: 'center', minWidth: 44, backgroundColor: headerBg, color: 'text.primary' }}>Goal</TableCell>
             {tableDates.map(date => (
-              <TableCell key={date.toISOString()} data-date={formatDateKey(date)} align="center" sx={{ fontWeight: 600, minWidth: chartMode === 'weekly' ? 80 : 24, borderColor: 'divider', backgroundColor: weekTint(date), borderBottom: isToday(date) ? `3px solid ${theme.palette.primary.main}` : undefined, color: 'text.primary', lineHeight: 1.2, px: 0.25 }}>
+              <TableCell key={date.toISOString()} data-date={formatDateKey(date)} align="center" sx={{ minWidth: chartMode === 'weekly' ? 80 : 24, borderColor: 'divider', backgroundColor: weekTint(date), borderBottom: isToday(date) ? `3px solid ${theme.palette.primary.main}` : undefined, color: 'text.primary', lineHeight: 1.2, px: 0.25 }}>
                 <Box sx={{ fontSize: theme.typography.labelXs.fontSize, opacity: 0.7 }}>{dayjs(date).format('ddd')}</Box>
                 <Box sx={{ fontSize: theme.typography.caption.fontSize }}>{chartMode === 'weekly' ? dayjs(date).format('DD MMM') : String(date.getDate()).padStart(2, '0')}</Box>
               </TableCell>
@@ -179,7 +179,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                             size={compactView ? 'small' : 'medium'}
                             sx={{
                               borderRadius: 1,
-                              minHeight: chartMode === 'monthly' ? (compactView ? 24 : 32) : (compactView ? 32 : 44),
+                              minHeight: compactView ? 32 : 44,
                               minWidth: 0,
                               py: 0,
                               backgroundColor: isFuture

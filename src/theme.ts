@@ -67,5 +67,20 @@ export const createAppTheme = (mode: 'light' | 'dark') =>
           },
         },
       },
+      MuiTable: {
+        styleOverrides: {
+          root: { borderCollapse: 'collapse' },
+        },
+      },
+      MuiTableContainer: {
+        styleOverrides: {
+          root: { overflowX: 'auto' },
+        },
+      },
+      MuiTableCell: {
+        styleOverrides: {
+          head: { fontWeight: 600 },
+        },
+      },
     },
   });
