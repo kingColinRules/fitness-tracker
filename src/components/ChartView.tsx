@@ -1,5 +1,5 @@
 import React from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart } from '@mui/x-charts/LineChart';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
@@ -26,26 +26,25 @@ const ChartView: React.FC<ChartViewProps> = ({
   selectedYear,
 }) => {
   const theme = useTheme();
+  const categories = Object.keys(exercises);
 
-  const generateChartDataForWeek = (start: Date) =>
-    generateWeekDates(start).map(date => {
-      const dateStr = formatDateKey(date);
-      const data: Record<string, unknown> = { date: `${date.getDate()}/${date.getMonth() + 1}` };
-      Object.keys(exercises).forEach(category => {
-        data[category] = exercises[category].filter(ex => isCompletedUtil(completions, category, ex, dateStr)).length;
-      });
-      return data;
-    });
+  const buildSeries = (dayDates: Date[]) =>
+    categories.map((category, idx) => ({
+      label: category,
+      data: dayDates.map(date => {
+        const dateStr = formatDateKey(date);
+        return exercises[category].filter(ex => isCompletedUtil(completions, category, ex, dateStr)).length;
+      }),
+      color: theme.palette.chartColors[idx % theme.palette.chartColors.length],
+      curve: 'linear' as const,
+    }));
 
-  const generateChartData = (monthDates = dates) =>
-    monthDates.map(date => {
-      const dateStr = formatDateKey(date);
-      const data: Record<string, unknown> = { date: `${date.getMonth() + 1}/${date.getDate()}` };
-      Object.keys(exercises).forEach(category => {
-        data[category] = exercises[category].filter(ex => isCompletedUtil(completions, category, ex, dateStr)).length;
-      });
-      return data;
-    });
+  const dayDates = chartMode === 'weekly' ? generateWeekDates(weekStartDate) : dates;
+  const xLabels = dayDates.map(date =>
+    chartMode === 'weekly'
+      ? `${date.getDate()}/${date.getMonth() + 1}`
+      : `${date.getMonth() + 1}/${date.getDate()}`
+  );
 
   const weekEnd = new Date(weekStartDate.getFullYear(), weekStartDate.getMonth(), weekStartDate.getDate() + 6);
   const periodLabel = chartMode === 'weekly'
@@ -58,24 +57,14 @@ const ChartView: React.FC<ChartViewProps> = ({
         <Typography variant="h5" sx={{ fontWeight: 700, color: 'text.primary' }}>Progress Chart</Typography>
         <Box sx={{ px: 1.5, py: 0.5, borderRadius: 1, color: 'text.secondary' }}>{periodLabel}</Box>
       </Box>
-      <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={chartMode === 'weekly' ? generateChartDataForWeek(weekStartDate) : generateChartData(dates)}>
-          <CartesianGrid strokeDasharray="3 3" stroke={theme.palette.divider} />
-          <XAxis dataKey="date" stroke={theme.palette.text.secondary} />
-          <YAxis stroke={theme.palette.text.secondary} />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: theme.palette.background.paper,
-              border: `1px solid ${theme.palette.divider}`,
-              color: theme.palette.text.primary,
-            }}
-          />
-          <Legend />
-          {Object.keys(exercises).map((category, idx) => (
-            <Line key={category} type="monotone" dataKey={category} name={category} stroke={theme.palette.chartColors[idx % theme.palette.chartColors.length]} strokeWidth={2} />
-          ))}
-        </LineChart>
-      </ResponsiveContainer>
+      <LineChart
+        xAxis={[{ data: xLabels, scaleType: 'point' }]}
+        yAxis={[{ tickMinStep: 1 }]}
+        series={buildSeries(dayDates)}
+        height={400}
+        sx={{ width: '100%' }}
+        slotProps={{ legend: { hidden: false } }}
+      />
     </Box>
   );
 };

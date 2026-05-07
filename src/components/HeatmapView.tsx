@@ -44,7 +44,7 @@ const HeatmapView: React.FC<HeatmapViewProps> = ({
 
   return (
     <Box sx={{ borderRadius: 2, boxShadow: 2, p: 3, backgroundColor: 'background.paper' }}>
-      <Typography variant="h5" sx={{ fontWeight: 700, mb: 2, color: 'text.primary' }}>Exercise Heatmap</Typography>
+      <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500, mb: 2 }}>Heatmap</Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
         {orderedDayLabels.map(label => (
           <Box key={label} sx={{ textAlign: 'center', fontSize: theme.typography.labelSm.fontSize, fontWeight: 600, pb: 0.5, color: 'text.secondary' }}>{label}</Box>

@@ -51,6 +51,7 @@ export const createAppTheme = (mode: 'light' | 'dark') =>
       chartColors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
     },
     typography: {
+      fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
       labelMicro: { fontSize: '0.625rem' },
       labelXs:    { fontSize: '0.65rem' },
       labelSm:    { fontSize: '0.7rem' },

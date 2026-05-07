@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Settings, Award, Save, BarChart2 } from 'lucide-react';
+import { Settings, Award, Save } from 'lucide-react';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
@@ -25,12 +25,10 @@ import { APP_NAME, DEFAULT_EXERCISES } from './constants';
 import { generateDates, generateWeekDates, startOfWeek, formatDateKey, formatRange } from './utils/dateUtils';
 import { getStoredHandle, storeHandle, generateExportJSON } from './utils/fileSystem';
 import ExerciseTable from './components/ExerciseTable';
-import HeatmapView from './components/HeatmapView';
-import ChartView from './components/ChartView';
+import StatsView from './components/StatsView';
 import SettingsModal from './components/SettingsModal';
 import AddCategoryModal from './components/AddCategoryModal';
 import AddExerciseModal from './components/AddExerciseModal';
-import StatsModal from './components/StatsModal';
 import BadgesModal from './components/BadgesModal';
 
 const ExerciseTracker = () => {
@@ -38,7 +36,6 @@ const ExerciseTracker = () => {
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
   const [activeView, setActiveView] = useState('table');
   const [showSettings, setShowSettings] = useState(false);
-  const [showStats, setShowStats] = useState(false);
   const [showBadges, setShowBadges] = useState(false);
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
@@ -381,7 +378,6 @@ const ExerciseTracker = () => {
                   </IconButton>
                 </span>
               </MuiTooltip>
-              <IconButton onClick={() => setShowStats(true)} color="inherit"><BarChart2 size={20} /></IconButton>
               <IconButton onClick={() => setShowBadges(true)} color="inherit"><Award size={20} /></IconButton>
               <IconButton onClick={() => setShowSettings(true)} color="inherit"><Settings size={20} /></IconButton>
             </Box>
@@ -394,9 +390,8 @@ const ExerciseTracker = () => {
           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
             <Box>
               <ToggleButtonGroup color="primary" value={activeView} exclusive onChange={(_e, val) => { if (val) setActiveView(val); }} size="small" aria-label="View">
-                <ToggleButton value="table">Table</ToggleButton>
-                <ToggleButton value="heatmap">Heatmap</ToggleButton>
-                <ToggleButton value="chart">Chart</ToggleButton>
+                <ToggleButton value="table">Log</ToggleButton>
+                <ToggleButton value="stats">Progress</ToggleButton>
               </ToggleButtonGroup>
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -472,23 +467,14 @@ const ExerciseTracker = () => {
             />
           )}
 
-          {activeView === 'heatmap' && (
-            <HeatmapView
-              dates={dates}
-              selectedMonth={selectedMonth}
-              selectedYear={selectedYear}
-              weekStartDay={weekStartDay}
+          {activeView === 'stats' && (
+            <StatsView
               exercises={exercises}
               completions={completions}
-            />
-          )}
-
-          {activeView === 'chart' && (
-            <ChartView
-              exercises={exercises}
-              completions={completions}
+              goalSettings={goalSettings}
               chartMode={chartMode}
               weekStartDate={weekStartDate}
+              weekStartDay={weekStartDay}
               dates={dates}
               selectedMonth={selectedMonth}
               selectedYear={selectedYear}
@@ -540,14 +526,6 @@ const ExerciseTracker = () => {
         onClose={() => setShowAddExercise(false)}
         onAdd={addExercise}
         exercises={exercises}
-      />
-
-      <StatsModal
-        open={showStats}
-        onClose={() => setShowStats(false)}
-        exercises={exercises}
-        completions={completions}
-        dates={dates}
       />
 
       <BadgesModal
