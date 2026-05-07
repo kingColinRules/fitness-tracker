@@ -425,15 +425,15 @@ const ExerciseTracker = () => {
                   ? formatRange(weekStartDate, new Date(weekStartDate.getFullYear(), weekStartDate.getMonth(), weekStartDate.getDate() + 6))
                   : dayjs(selectedDateValue).format('MMMM YYYY')}
               </Typography>
-              <IconButton ref={calendarAnchorRef} size="small" color="inherit" onClick={() => setPickerOpen(true)}>
+              <IconButton ref={calendarAnchorRef} size="small" color="inherit" onClick={() => setPickerOpen(true)} aria-label="Open calendar">
                 <CalendarMonthIcon fontSize="small" />
               </IconButton>
               <ToggleButtonGroup color="primary" value={chartMode} exclusive onChange={(_e, val) => { if (val) { setExerciseColumnWidth(val === 'weekly' ? 160 : 100); setChartMode(val); } }} size="small" aria-label="Chart Mode">
                 <ToggleButton value="weekly">Week</ToggleButton>
                 <ToggleButton value="monthly">Month</ToggleButton>
               </ToggleButtonGroup>
-              <IconButton onClick={prevPeriod} color="inherit" size="small"><ChevronLeftIcon /></IconButton>
-              <IconButton onClick={nextPeriod} color="inherit" size="small" disabled={isAtLatestPeriod}><ChevronRightIcon /></IconButton>
+              <IconButton onClick={prevPeriod} color="inherit" size="small" aria-label="Previous period"><ChevronLeftIcon /></IconButton>
+              <IconButton onClick={nextPeriod} color="inherit" size="small" disabled={isAtLatestPeriod} aria-label="Next period"><ChevronRightIcon /></IconButton>
             </Box>
           </Box>
 

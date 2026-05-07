@@ -376,28 +376,28 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
                 <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Theme</Typography>
-                <ToggleButtonGroup color="primary" value={darkMode ? 'dark' : 'light'} exclusive onChange={(_e, val) => { if (val) setDarkMode(val === 'dark'); }} size="small">
+                <ToggleButtonGroup color="primary" value={darkMode ? 'dark' : 'light'} exclusive onChange={(_e, val) => { if (val) setDarkMode(val === 'dark'); }} size="small" aria-label="Theme">
                   <ToggleButton value="light">Light Mode</ToggleButton>
                   <ToggleButton value="dark">Dark Mode</ToggleButton>
                 </ToggleButtonGroup>
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
                 <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Size</Typography>
-                <ToggleButtonGroup color="primary" value={compactView ? 'compact' : 'normal'} exclusive onChange={(_e, val) => { if (val) setCompactView(val === 'compact'); }} size="small">
+                <ToggleButtonGroup color="primary" value={compactView ? 'compact' : 'normal'} exclusive onChange={(_e, val) => { if (val) setCompactView(val === 'compact'); }} size="small" aria-label="View size">
                   <ToggleButton value="normal">Normal</ToggleButton>
                   <ToggleButton value="compact">Compact</ToggleButton>
                 </ToggleButtonGroup>
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
                 <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Default Calendar View</Typography>
-                <ToggleButtonGroup color="primary" value={defaultChartMode} exclusive onChange={(_e, val) => { if (val) { setDefaultChartMode(val); setChartMode(val); } }} size="small">
+                <ToggleButtonGroup color="primary" value={defaultChartMode} exclusive onChange={(_e, val) => { if (val) { setDefaultChartMode(val); setChartMode(val); } }} size="small" aria-label="Default calendar view">
                   <ToggleButton value="weekly">Week</ToggleButton>
                   <ToggleButton value="monthly">Month</ToggleButton>
                 </ToggleButtonGroup>
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
                 <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Week Starts On</Typography>
-                <ToggleButtonGroup color="primary" value={weekStartDay} exclusive onChange={(_e, val) => { if (val !== null) setWeekStartDay(val); }} size="small">
+                <ToggleButtonGroup color="primary" value={weekStartDay} exclusive onChange={(_e, val) => { if (val !== null) setWeekStartDay(val); }} size="small" aria-label="Week starts on">
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((label, i) => (
                     <ToggleButton key={i} value={i}>{label}</ToggleButton>
                   ))}

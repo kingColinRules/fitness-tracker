@@ -174,6 +174,8 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                               }
                               toggleCompletion(category, exercise, dateStr);
                             }}
+                            aria-label={`${exercise}, ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                            aria-pressed={!isFuture && completed}
                             disabled={isFuture}
                             fullWidth
                             size={compactView ? 'small' : 'medium'}
