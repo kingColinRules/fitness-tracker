@@ -91,6 +91,13 @@ const ExerciseTracker = () => {
     } catch { /* ignore */ }
     return 1;
   });
+  const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => {
+    try {
+      const s = localStorage.getItem('exerciseSettings');
+      if (s) return JSON.parse(s).animationsEnabled ?? true;
+    } catch { /* ignore */ }
+    return true;
+  });
 
   const [exercises, setExercises] = useState<Record<string, string[]>>(() => {
     try {
@@ -189,11 +196,11 @@ const ExerciseTracker = () => {
   // Persist settings
   useEffect(() => {
     try {
-      localStorage.setItem('exerciseSettings', JSON.stringify({ darkMode, compactView, goalSettings, defaultChartMode, weekStartDay }));
+      localStorage.setItem('exerciseSettings', JSON.stringify({ darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled }));
     } catch (e) {
       console.error('Storage error:', e);
     }
-  }, [darkMode, compactView, goalSettings, defaultChartMode, weekStartDay]);
+  }, [darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled]);
 
   const handleWeekStartDayChange = (day: number) => {
     setWeekStartDay(day);
@@ -450,6 +457,7 @@ const ExerciseTracker = () => {
               weekStartDay={weekStartDay}
               tableWrapperRef={tableWrapperRef}
               exerciseHeaderRef={exerciseHeaderRef}
+              animationsEnabled={animationsEnabled}
               toggleCompletion={toggleCompletion}
               onUpdateDescription={(category, exercise, description) => {
                 setExerciseDescriptions(prev => {
@@ -501,6 +509,8 @@ const ExerciseTracker = () => {
         weekStartDay={weekStartDay}
         setWeekStartDay={handleWeekStartDayChange}
         setChartMode={setChartMode}
+        animationsEnabled={animationsEnabled}
+        setAnimationsEnabled={setAnimationsEnabled}
         exercises={exercises}
         setExercises={setExercises}
         completions={completions}

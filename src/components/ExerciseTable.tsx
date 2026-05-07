@@ -30,6 +30,7 @@ interface ExerciseTableProps {
   weekStartDay: number;
   tableWrapperRef: React.RefObject<HTMLDivElement>;
   exerciseHeaderRef: React.RefObject<HTMLTableCellElement>;
+  animationsEnabled: boolean;
   toggleCompletion: (category: string, exercise: string, dateStr: string) => void;
   onUpdateDescription: (category: string, exercise: string, description: string) => void;
 }
@@ -46,6 +47,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
   weekStartDay,
   tableWrapperRef,
   exerciseHeaderRef,
+  animationsEnabled,
   toggleCompletion,
   onUpdateDescription,
 }) => {
@@ -160,7 +162,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                           <Button
                             onClick={(e) => {
                               if (isFuture) return;
-                              if (showProgress && !completed && weeklyCount === requiredCount - 1) {
+                              if (animationsEnabled && showProgress && !completed && weeklyCount === requiredCount - 1) {
                                 const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                 confetti({
                                   particleCount: 80,

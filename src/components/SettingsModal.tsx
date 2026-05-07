@@ -27,6 +27,8 @@ interface SettingsModalProps {
   weekStartDay: number;
   setWeekStartDay: (v: number) => void;
   setChartMode: (v: 'weekly' | 'monthly') => void;
+  animationsEnabled: boolean;
+  setAnimationsEnabled: (v: boolean) => void;
   exercises: Record<string, string[]>;
   setExercises: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
   completions: Record<string, boolean>;
@@ -46,7 +48,7 @@ interface SettingsModalProps {
 const SettingsModal: React.FC<SettingsModalProps> = ({
   open, onClose,
   darkMode, setDarkMode, compactView, setCompactView, defaultChartMode, setDefaultChartMode,
-  weekStartDay, setWeekStartDay, setChartMode,
+  weekStartDay, setWeekStartDay, setChartMode, animationsEnabled, setAnimationsEnabled,
   exercises, setExercises, completions, setCompletions, goalSettings, setGoalSettings,
   exerciseDescriptions, setExerciseDescriptions,
   onOpenAddCategory, onOpenAddExercise,
@@ -401,6 +403,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                   {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((label, i) => (
                     <ToggleButton key={i} value={i}>{label}</ToggleButton>
                   ))}
+                </ToggleButtonGroup>
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
+                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Animations</Typography>
+                <ToggleButtonGroup color="primary" value={animationsEnabled ? 'on' : 'off'} exclusive onChange={(_e, val) => { if (val) setAnimationsEnabled(val === 'on'); }} size="small" aria-label="Animations">
+                  <ToggleButton value="on">On</ToggleButton>
+                  <ToggleButton value="off">Off</ToggleButton>
                 </ToggleButtonGroup>
               </Box>
             </Box>
