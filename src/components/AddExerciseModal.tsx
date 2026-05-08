@@ -6,15 +6,16 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
+import { useAppStore } from '../store';
 
 interface AddExerciseModalProps {
   open: boolean;
   onClose: () => void;
   onAdd: (name: string, category: string) => void;
-  exercises: Record<string, string[]>;
 }
 
-const AddExerciseModal: React.FC<AddExerciseModalProps> = ({ open, onClose, onAdd, exercises }) => {
+const AddExerciseModal: React.FC<AddExerciseModalProps> = ({ open, onClose, onAdd }) => {
+  const { exercises } = useAppStore();
   const categories = Object.keys(exercises);
   const [name, setName] = useState('');
   const [category, setCategory] = useState(categories[0] || '');

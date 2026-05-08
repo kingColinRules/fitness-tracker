@@ -6,15 +6,10 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import { formatDateKey, generateWeekDates, startOfWeek } from '../utils/dateUtils';
+import { useAppStore } from '../store';
 
 interface StatsViewProps {
-  exercises: Record<string, string[]>;
-  completions: Record<string, boolean>;
-  goalSettings: Record<string, { enabled: boolean; required: number }>;
-  exerciseGoals: Record<string, { override: boolean; required: number; disabled?: boolean }>;
-  chartMode: 'weekly' | 'monthly';
   weekStartDate: Date;
-  weekStartDay: number;
   dates: Date[];
   selectedMonth: number;
   selectedYear: number;
@@ -85,17 +80,12 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sparkData, color, plo
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 const StatsView: React.FC<StatsViewProps> = ({
-  exercises,
-  completions,
-  goalSettings,
-  exerciseGoals,
-  chartMode,
   weekStartDate,
-  weekStartDay,
   dates,
   selectedMonth,
   selectedYear,
 }) => {
+  const { exercises, completions, goalSettings, exerciseGoals, chartMode, weekStartDay } = useAppStore();
   const theme = useTheme();
   const categories = Object.keys(exercises);
   const isWeekly = chartMode === 'weekly';

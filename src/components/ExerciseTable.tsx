@@ -17,42 +17,26 @@ import { useTheme, alpha } from '@mui/material/styles';
 import dayjs from 'dayjs';
 import { formatDateKey, isToday, isFutureDate } from '../utils/dateUtils';
 import { isCompleted as isCompletedUtil } from '../utils/completionUtils';
+import { useAppStore } from '../store';
 
 interface ExerciseTableProps {
-  exercises: Record<string, string[]>;
-  completions: Record<string, boolean>;
-  goalSettings: Record<string, { enabled: boolean; required: number }>;
-  exerciseGoals: Record<string, { override: boolean; required: number; disabled?: boolean }>;
-  exerciseDescriptions: Record<string, string>;
   tableDates: Date[];
-  chartMode: 'weekly' | 'monthly';
-  compactView: boolean;
   exerciseColumnWidth: number;
-  weekStartDay: number;
   tableWrapperRef: React.RefObject<HTMLDivElement>;
   exerciseHeaderRef: React.RefObject<HTMLTableCellElement>;
-  animationsEnabled: boolean;
-  toggleCompletion: (category: string, exercise: string, dateStr: string) => void;
-  onUpdateDescription: (category: string, exercise: string, description: string) => void;
 }
 
 const ExerciseTable: React.FC<ExerciseTableProps> = ({
-  exercises,
-  completions,
-  goalSettings,
-  exerciseGoals,
-  exerciseDescriptions,
   tableDates,
-  chartMode,
-  compactView,
   exerciseColumnWidth,
-  weekStartDay,
   tableWrapperRef,
   exerciseHeaderRef,
-  animationsEnabled,
-  toggleCompletion,
-  onUpdateDescription,
 }) => {
+  const {
+    exercises, completions, goalSettings, exerciseGoals, exerciseDescriptions,
+    chartMode, compactView, weekStartDay, animationsEnabled,
+    toggleCompletion, updateExerciseDescription,
+  } = useAppStore();
   const theme = useTheme();
   const isDark = theme.palette.mode === 'dark';
 
@@ -232,7 +216,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
         />
         <Box sx={{ display: 'flex', gap: 1, mt: 1.5, justifyContent: 'flex-end' }}>
           <Button size="small" onClick={closePopover}>Cancel</Button>
-          <Button size="small" variant="contained" onClick={() => { if (popoverExercise) onUpdateDescription(popoverExercise.category, popoverExercise.name, popoverDesc.trim()); closePopover(); }}>Save</Button>
+          <Button size="small" variant="contained" onClick={() => { if (popoverExercise) updateExerciseDescription(popoverExercise.category, popoverExercise.name, popoverDesc.trim()); closePopover(); }}>Save</Button>
         </Box>
       </Box>
     </Popover>

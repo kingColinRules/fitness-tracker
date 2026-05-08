@@ -8,16 +8,16 @@ import Button from '@mui/material/Button';
 import { useTheme } from '@mui/material/styles';
 import { formatDateKey } from '../utils/dateUtils';
 import { isCompleted as isCompletedUtil } from '../utils/completionUtils';
+import { useAppStore } from '../store';
 
 interface BadgesModalProps {
   open: boolean;
   onClose: () => void;
-  exercises: Record<string, string[]>;
-  completions: Record<string, boolean>;
   dates: Date[];
 }
 
-const BadgesModal: React.FC<BadgesModalProps> = ({ open, onClose, exercises, completions, dates }) => {
+const BadgesModal: React.FC<BadgesModalProps> = ({ open, onClose, dates }) => {
+  const { exercises, completions } = useAppStore();
   const theme = useTheme();
 
   const totalCompletions = dates.reduce((sum, date) => {

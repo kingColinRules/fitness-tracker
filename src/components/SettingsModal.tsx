@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { X, Plus, Trash2, Edit2, GripVertical, Download, Upload } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Modal from '@mui/material/Modal';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
 import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 import Button from '@mui/material/Button';
@@ -13,34 +17,13 @@ import Tab from '@mui/material/Tab';
 import { useTheme } from '@mui/material/styles';
 import { getLastExportInfo } from '../utils/fileSystem';
 import { DEFAULT_EXERCISES } from '../constants';
+import { useAppStore } from '../store';
 
 interface SettingsModalProps {
   open: boolean;
   onClose: () => void;
-  darkMode: boolean;
-  setDarkMode: (v: boolean) => void;
-  compactView: boolean;
-  setCompactView: (v: boolean) => void;
-  defaultChartMode: 'weekly' | 'monthly';
-  setDefaultChartMode: (v: 'weekly' | 'monthly') => void;
-  weekStartDay: number;
-  setWeekStartDay: (v: number) => void;
-  setChartMode: (v: 'weekly' | 'monthly') => void;
-  animationsEnabled: boolean;
-  setAnimationsEnabled: (v: boolean) => void;
-  exercises: Record<string, string[]>;
-  setExercises: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
-  completions: Record<string, boolean>;
-  setCompletions: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
-  goalSettings: Record<string, { enabled: boolean; required: number }>;
-  setGoalSettings: React.Dispatch<React.SetStateAction<Record<string, { enabled: boolean; required: number }>>>;
-  exerciseGoals: Record<string, { override: boolean; required: number; disabled?: boolean }>;
-  setExerciseGoals: React.Dispatch<React.SetStateAction<Record<string, { override: boolean; required: number; disabled?: boolean }>>>;
-  exerciseDescriptions: Record<string, string>;
-  setExerciseDescriptions: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   onOpenAddCategory: () => void;
   onOpenAddExercise: () => void;
-  hasUnsavedExport: boolean;
   savedFileName: string | null;
   exportToJSON: () => Promise<void>;
   importFromJSON: (event: React.ChangeEvent<HTMLInputElement>) => void;
@@ -48,14 +31,17 @@ interface SettingsModalProps {
 
 const SettingsModal: React.FC<SettingsModalProps> = ({
   open, onClose,
-  darkMode, setDarkMode, compactView, setCompactView, defaultChartMode, setDefaultChartMode,
-  weekStartDay, setWeekStartDay, setChartMode, animationsEnabled, setAnimationsEnabled,
-  exercises, setExercises, completions, setCompletions, goalSettings, setGoalSettings,
-  exerciseGoals, setExerciseGoals,
-  exerciseDescriptions, setExerciseDescriptions,
   onOpenAddCategory, onOpenAddExercise,
   savedFileName, exportToJSON, importFromJSON,
 }) => {
+  const {
+    darkMode, setDarkMode, compactView, setCompactView,
+    defaultChartMode, setDefaultChartMode, weekStartDay, setWeekStartDay,
+    animationsEnabled, setAnimationsEnabled,
+    exercises, setExercises, completions, setCompletions,
+    goalSettings, setGoalSettings, exerciseGoals, setExerciseGoals,
+    exerciseDescriptions, setExerciseDescriptions,
+  } = useAppStore();
   const [activeTab, setActiveTab] = useState(0);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
@@ -69,6 +55,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [editExerciseNoGoal, setEditExerciseNoGoal] = useState(false);
   const [draggedItem, setDraggedItem] = useState<{ category: string; index: number } | null>(null);
   const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
   const theme = useTheme();
 
   const handleCategoryDragStart = (e: React.DragEvent, category: string) => {
@@ -163,24 +150,27 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const deleteCategory = (category: string) => {
-    if (confirm(`Delete "${category}"?`)) {
-      const newExercises = { ...exercises };
-      delete newExercises[category];
-      setExercises(newExercises);
-      const newGoalSettings = { ...goalSettings };
-      delete newGoalSettings[category];
-      setGoalSettings(newGoalSettings);
-      const newCompletions = { ...completions };
-      Object.keys(newCompletions).forEach(key => {
-        if (key.startsWith(`${category}-`)) delete newCompletions[key];
-      });
-      setCompletions(newCompletions);
-      const newDescriptions = { ...exerciseDescriptions };
-      Object.keys(newDescriptions).forEach(key => {
-        if (key.startsWith(`${category}-`)) delete newDescriptions[key];
-      });
-      setExerciseDescriptions(newDescriptions);
-    }
+    setConfirmDialog({
+      message: `Delete "${category}"?`,
+      onConfirm: () => {
+        const newExercises = { ...exercises };
+        delete newExercises[category];
+        setExercises(newExercises);
+        const newGoalSettings = { ...goalSettings };
+        delete newGoalSettings[category];
+        setGoalSettings(newGoalSettings);
+        const newCompletions = { ...completions };
+        Object.keys(newCompletions).forEach(key => {
+          if (key.startsWith(`${category}-`)) delete newCompletions[key];
+        });
+        setCompletions(newCompletions);
+        const newDescriptions = { ...exerciseDescriptions };
+        Object.keys(newDescriptions).forEach(key => {
+          if (key.startsWith(`${category}-`)) delete newDescriptions[key];
+        });
+        setExerciseDescriptions(newDescriptions);
+      },
+    });
   };
 
   const startEditExercise = (category: string, exerciseName: string) => {
@@ -239,22 +229,25 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const deleteExercise = (category: string, exerciseName: string) => {
-    if (confirm(`Delete "${exerciseName}"?`)) {
-      setExercises(prev => ({ ...prev, [category]: prev[category].filter(ex => ex !== exerciseName) }));
-      const newCompletions = { ...completions };
-      Object.keys(newCompletions).forEach(key => {
-        if (key.includes(`${category}-${exerciseName}-`)) delete newCompletions[key];
-      });
-      setCompletions(newCompletions);
-      const newDescriptions = { ...exerciseDescriptions };
-      delete newDescriptions[`${category}-${exerciseName}`];
-      setExerciseDescriptions(newDescriptions);
-      setExerciseGoals(prev => {
-        const next = { ...prev };
-        delete next[`${category}-${exerciseName}`];
-        return next;
-      });
-    }
+    setConfirmDialog({
+      message: `Delete "${exerciseName}"?`,
+      onConfirm: () => {
+        setExercises(prev => ({ ...prev, [category]: prev[category].filter(ex => ex !== exerciseName) }));
+        const newCompletions = { ...completions };
+        Object.keys(newCompletions).forEach(key => {
+          if (key.includes(`${category}-${exerciseName}-`)) delete newCompletions[key];
+        });
+        setCompletions(newCompletions);
+        const newDescriptions = { ...exerciseDescriptions };
+        delete newDescriptions[`${category}-${exerciseName}`];
+        setExerciseDescriptions(newDescriptions);
+        setExerciseGoals(prev => {
+          const next = { ...prev };
+          delete next[`${category}-${exerciseName}`];
+          return next;
+        });
+      },
+    });
   };
 
   const handleDragStart = (e: React.DragEvent, category: string, index: number) => {
@@ -283,15 +276,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleClearData = () => {
-    if (confirm('Clear ALL data?')) {
-      localStorage.clear();
-      setCompletions({});
-      setExercises(DEFAULT_EXERCISES);
-      setExerciseDescriptions({});
-    }
+    setConfirmDialog({
+      message: 'Clear ALL data? This cannot be undone.',
+      onConfirm: () => {
+        localStorage.clear();
+        setCompletions({});
+        setExercises(DEFAULT_EXERCISES);
+        setExerciseDescriptions({});
+      },
+    });
   };
 
   return (
+    <>
     <Modal open={open} onClose={onClose}>
       <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', borderRadius: 2, boxShadow: 6, width: 'calc(100% - 32px)', maxWidth: 960, display: 'flex', flexDirection: 'column', backgroundColor: 'background.paper', color: 'text.primary', height: '90vh' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 3, pb: 0, flexShrink: 0 }}>
@@ -382,7 +379,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <Typography sx={{ color: 'text.secondary', fontStyle: 'italic' }}>No exercises</Typography>
                       ) : (
                         exercises[category].map((exercise, index) => (
-                          <Box key={exercise} draggable onDragStart={(e) => handleDragStart(e, category, index)} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, category, index)} sx={{ display: 'flex', alignItems: editingExercise?.category === category && editingExercise?.name === exercise ? 'flex-start' : 'center', gap: 1, p: 1, borderRadius: 1, '&:hover': { backgroundColor: 'action.hover' } }} style={{ cursor: 'grab' }}>
+                          <Box key={exercise} draggable onDragStart={(e) => handleDragStart(e, category, index)} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, category, index)} sx={{ display: 'flex', alignItems: editingExercise?.category === category && editingExercise?.name === exercise ? 'flex-start' : 'center', gap: 1, p: 1, borderRadius: 1, cursor: 'grab', '&:hover': { backgroundColor: 'action.hover' } }}>
                             <GripVertical style={{ color: theme.palette.text.secondary, marginTop: editingExercise?.category === category && editingExercise?.name === exercise ? 6 : 0 }} size={compactView ? 12 : 16} />
                             {editingExercise?.category === category && editingExercise?.name === exercise ? (
                               <>
@@ -480,7 +477,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
                 <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Default Calendar View</Typography>
-                <ToggleButtonGroup color="primary" value={defaultChartMode} exclusive onChange={(_e, val) => { if (val) { setDefaultChartMode(val); setChartMode(val); } }} size="small" aria-label="Default calendar view">
+                <ToggleButtonGroup color="primary" value={defaultChartMode} exclusive onChange={(_e, val) => { if (val) setDefaultChartMode(val); }} size="small" aria-label="Default calendar view">
                   <ToggleButton value="weekly">Week</ToggleButton>
                   <ToggleButton value="monthly">Month</ToggleButton>
                 </ToggleButtonGroup>
@@ -526,6 +523,15 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         </Box>
       </Box>
     </Modal>
+    <Dialog open={!!confirmDialog} onClose={() => setConfirmDialog(null)}>
+      <DialogTitle>Confirm</DialogTitle>
+      <DialogContent>{confirmDialog?.message}</DialogContent>
+      <DialogActions>
+        <Button onClick={() => setConfirmDialog(null)}>Cancel</Button>
+        <Button onClick={() => { confirmDialog?.onConfirm(); setConfirmDialog(null); }} color="error" variant="contained">Confirm</Button>
+      </DialogActions>
+    </Dialog>
+    </>
   );
 };
 

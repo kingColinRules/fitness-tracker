@@ -20,7 +20,8 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import dayjs, { Dayjs } from 'dayjs';
 import { createAppTheme } from './theme';
-import { APP_NAME, DEFAULT_EXERCISES } from './constants';
+import { APP_NAME } from './constants';
+import { useAppStore } from './store';
 
 import { generateDates, generateWeekDates, startOfWeek, formatDateKey, formatRange } from './utils/dateUtils';
 import { getStoredHandle, storeHandle, generateExportJSON } from './utils/fileSystem';
@@ -32,6 +33,13 @@ import AddExerciseModal from './components/AddExerciseModal';
 import BadgesModal from './components/BadgesModal';
 
 const ExerciseTracker = () => {
+  const {
+    exercises, completions, exerciseDescriptions, exerciseGoals, goalSettings,
+    darkMode, compactView, chartMode, weekStartDay, defaultChartMode, animationsEnabled,
+    hasUnsavedExport, setHasUnsavedExport, setChartMode,
+    setExercises, setCompletions, setGoalSettings, setExerciseDescriptions,
+  } = useAppStore();
+
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
   const [activeView, setActiveView] = useState('table');
@@ -39,118 +47,24 @@ const ExerciseTracker = () => {
   const [showBadges, setShowBadges] = useState(false);
   const [showAddExercise, setShowAddExercise] = useState(false);
   const [showAddCategory, setShowAddCategory] = useState(false);
-  const [hasUnsavedExport, setHasUnsavedExport] = useState<boolean>(() => {
-    try {
-      const lastExport = localStorage.getItem('lastExportDate');
-      const lastChange = localStorage.getItem('lastChangeDate');
-      if (!lastExport) return false;
-      if (lastChange) return new Date(lastChange) > new Date(lastExport);
-    } catch { /* ignore */ }
-    return false;
-  });
   const [savedFileName, setSavedFileName] = useState<string | null>(null);
   const [importFeedback, setImportFeedback] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'warning' | 'info' }>({ open: false, message: '', severity: 'success' });
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [weekStartDate, setWeekStartDate] = useState<Date>(() => startOfWeek(new Date(), weekStartDay));
+  const [selectedDateValue, setSelectedDateValue] = useState<Dayjs | null>(dayjs(new Date()));
+  const [exerciseColumnWidth, setExerciseColumnWidth] = useState<number>(compactView ? 72 : 200);
 
-  const [goalSettings, setGoalSettings] = useState<Record<string, { enabled: boolean; required: number }>>(() => {
-    try {
-      const s = localStorage.getItem('exerciseSettings');
-      if (s) return JSON.parse(s).goalSettings ?? { weight: { enabled: true, required: 3 }, isometric: { enabled: true, required: 2 }, stretch: { enabled: true, required: 2 } };
-    } catch { /* ignore */ }
-    return { weight: { enabled: true, required: 3 }, isometric: { enabled: true, required: 2 }, stretch: { enabled: true, required: 2 } };
-  });
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    try {
-      const s = localStorage.getItem('exerciseSettings');
-      if (s) return JSON.parse(s).darkMode ?? false;
-    } catch { /* ignore */ }
-    return false;
-  });
   const theme = useMemo(() => createAppTheme(darkMode ? 'dark' : 'light'), [darkMode]);
-  const [compactView, setCompactView] = useState<boolean>(() => {
-    try {
-      const s = localStorage.getItem('exerciseSettings');
-      if (s) return JSON.parse(s).compactView ?? false;
-    } catch { /* ignore */ }
-    return false;
-  });
-  const [defaultChartMode, setDefaultChartMode] = useState<'weekly' | 'monthly'>(() => {
-    try {
-      const s = localStorage.getItem('exerciseSettings');
-      if (s) return JSON.parse(s).defaultChartMode ?? 'weekly';
-    } catch { /* ignore */ }
-    return 'weekly';
-  });
-  const [weekStartDay, setWeekStartDay] = useState<number>(() => {
-    try {
-      const s = localStorage.getItem('exerciseSettings');
-      if (s) return JSON.parse(s).weekStartDay ?? 1;
-    } catch { /* ignore */ }
-    return 1;
-  });
-  const [animationsEnabled, setAnimationsEnabled] = useState<boolean>(() => {
-    try {
-      const s = localStorage.getItem('exerciseSettings');
-      if (s) return JSON.parse(s).animationsEnabled ?? true;
-    } catch { /* ignore */ }
-    return true;
-  });
-
-  const [exercises, setExercises] = useState<Record<string, string[]>>(() => {
-    try {
-      const s = localStorage.getItem('exerciseList');
-      if (s) return JSON.parse(s);
-    } catch { /* ignore */ }
-    return DEFAULT_EXERCISES;
-  });
-  const [completions, setCompletions] = useState<Record<string, boolean>>(() => {
-    try {
-      const s = localStorage.getItem('exerciseCompletions');
-      if (s) return JSON.parse(s);
-    } catch { /* ignore */ }
-    return {};
-  });
-  const [exerciseDescriptions, setExerciseDescriptions] = useState<Record<string, string>>(() => {
-    try {
-      const s = localStorage.getItem('exerciseDescriptions');
-      if (s) return JSON.parse(s);
-    } catch { /* ignore */ }
-    return {};
-  });
-  const [exerciseGoals, setExerciseGoals] = useState<Record<string, { override: boolean; required: number; disabled?: boolean }>>(() => {
-    try {
-      const s = localStorage.getItem('exerciseGoals');
-      if (s) return JSON.parse(s);
-    } catch { /* ignore */ }
-    return {};
-  });
 
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const exerciseHeaderRef = useRef<HTMLTableCellElement>(null);
   const calendarAnchorRef = useRef<HTMLButtonElement>(null);
   const fileHandleRef = useRef<FileSystemFileHandle | null>(null);
 
-  const [exerciseColumnWidth, setExerciseColumnWidth] = useState<number>(compactView ? 72 : 200);
-  const [chartMode, setChartMode] = useState<'weekly' | 'monthly'>(defaultChartMode);
-  const [weekStartDate, setWeekStartDate] = useState<Date>(() => startOfWeek(new Date(), weekStartDay));
-  const [selectedDateValue, setSelectedDateValue] = useState<Dayjs | null>(dayjs(new Date()));
-
-  const scrollToTodayImmediate = () => {
-    const todayStr = formatDateKey(new Date());
-    const container = tableWrapperRef.current;
-    if (!container) return;
-    const el = container.querySelector(`th[data-date="${todayStr}"]`) as HTMLElement | null;
-    if (el) {
-      const offset = el.offsetLeft - (container.clientWidth / 2) + (el.clientWidth / 2);
-      container.scrollTo({ left: Math.max(0, offset), behavior: 'smooth' });
-    }
-  };
-
-  // Scroll to today when month/year/compactView changes
+  // Sync weekStartDate when weekStartDay setting changes
   useEffect(() => {
-    const t = setTimeout(scrollToTodayImmediate, 150);
-    return () => clearTimeout(t);
-  }, [selectedMonth, selectedYear, compactView]);
+    setWeekStartDate(prev => startOfWeek(prev, weekStartDay)); // eslint-disable-line react-hooks/set-state-in-effect
+  }, [weekStartDay]);
 
   // Measure sticky exercise column width
   useEffect(() => {
@@ -174,50 +88,50 @@ const ExerciseTracker = () => {
     try {
       localStorage.setItem('exerciseCompletions', JSON.stringify(completions));
       localStorage.setItem('lastChangeDate', new Date().toISOString());
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    } catch (e) { console.error('Storage error:', e); }
   }, [completions]);
 
   // Persist exercise list
   useEffect(() => {
-    try {
-      localStorage.setItem('exerciseList', JSON.stringify(exercises));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    try { localStorage.setItem('exerciseList', JSON.stringify(exercises)); }
+    catch (e) { console.error('Storage error:', e); }
   }, [exercises]);
 
   // Persist descriptions
   useEffect(() => {
-    try {
-      localStorage.setItem('exerciseDescriptions', JSON.stringify(exerciseDescriptions));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    try { localStorage.setItem('exerciseDescriptions', JSON.stringify(exerciseDescriptions)); }
+    catch (e) { console.error('Storage error:', e); }
   }, [exerciseDescriptions]);
 
+  // Persist exercise goals
   useEffect(() => {
-    try {
-      localStorage.setItem('exerciseGoals', JSON.stringify(exerciseGoals));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    try { localStorage.setItem('exerciseGoals', JSON.stringify(exerciseGoals)); }
+    catch (e) { console.error('Storage error:', e); }
   }, [exerciseGoals]);
 
   // Persist settings
   useEffect(() => {
     try {
       localStorage.setItem('exerciseSettings', JSON.stringify({ darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled }));
-    } catch (e) {
-      console.error('Storage error:', e);
-    }
+    } catch (e) { console.error('Storage error:', e); }
   }, [darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled]);
 
-  const handleWeekStartDayChange = (day: number) => {
-    setWeekStartDay(day);
-    setWeekStartDate(prev => startOfWeek(prev, day));
+  const scrollToTodayImmediate = () => {
+    const todayStr = formatDateKey(new Date());
+    const container = tableWrapperRef.current;
+    if (!container) return;
+    const el = container.querySelector(`th[data-date="${todayStr}"]`) as HTMLElement | null;
+    if (el) {
+      const offset = el.offsetLeft - (container.clientWidth / 2) + (el.clientWidth / 2);
+      container.scrollTo({ left: Math.max(0, offset), behavior: 'smooth' });
+    }
   };
+
+  // Scroll to today when month/year/compactView changes
+  useEffect(() => {
+    const t = setTimeout(scrollToTodayImmediate, 150);
+    return () => clearTimeout(t);
+  }, [selectedMonth, selectedYear, compactView]);
 
   const dates = generateDates(selectedYear, selectedMonth);
   const tableDates = chartMode === 'weekly' ? generateWeekDates(weekStartDate) : dates;
@@ -262,14 +176,9 @@ const ExerciseTracker = () => {
     }
   };
 
-  const toggleCompletion = (category: string, exercise: string, dateStr: string) => {
-    const key = `${category}-${exercise}-${dateStr}`;
-    setCompletions(prev => ({ ...prev, [key]: !prev[key] }));
-    setHasUnsavedExport(true);
-  };
-
   const writeJSON = async (handle: FileSystemFileHandle) => {
-    const json = generateExportJSON(exercises, completions, goalSettings, exerciseDescriptions);
+    const state = useAppStore.getState();
+    const json = generateExportJSON(state.exercises, state.completions, state.goalSettings, state.exerciseDescriptions);
     const writable = await handle.createWritable();
     await writable.write(json);
     await writable.close();
@@ -278,7 +187,8 @@ const ExerciseTracker = () => {
   };
 
   const exportToJSON = async () => {
-    const json = generateExportJSON(exercises, completions, goalSettings, exerciseDescriptions);
+    const state = useAppStore.getState();
+    const json = generateExportJSON(state.exercises, state.completions, state.goalSettings, state.exerciseDescriptions);
     if (!('showSaveFilePicker' in window)) {
       const blob = new Blob([json], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
@@ -331,12 +241,8 @@ const ExerciseTracker = () => {
       const result = e.target?.result;
       if (typeof result !== 'string') return;
       let parsed: unknown;
-      try {
-        parsed = JSON.parse(result);
-      } catch {
-        setImportFeedback({ open: true, message: 'Invalid JSON file.', severity: 'error' });
-        return;
-      }
+      try { parsed = JSON.parse(result); }
+      catch { setImportFeedback({ open: true, message: 'Invalid JSON file.', severity: 'error' }); return; }
       if (
         typeof parsed !== 'object' || parsed === null ||
         !('version' in parsed) || !('exercises' in parsed) || !('completions' in parsed)
@@ -380,192 +286,141 @@ const ExerciseTracker = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-    <Box sx={{ width: '100%', minHeight: '100vh', overflow: 'auto', backgroundColor: 'background.default' }}>
-      <AppBar position="static" elevation={2}>
-        <Toolbar disableGutters sx={{ px: 3 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 1200, mx: 'auto' }}>
-            <Typography variant="h4" sx={{ fontWeight: 700 }}>{APP_NAME}</Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <MuiTooltip title={hasUnsavedExport ? 'Click to export' : 'All saved'}>
-                <span>
-                  <IconButton onClick={hasUnsavedExport ? saveToFile : undefined} disabled={!hasUnsavedExport} color="inherit">
-                    <Save size={20} />
-                  </IconButton>
-                </span>
-              </MuiTooltip>
-              <IconButton onClick={() => setShowBadges(true)} color="inherit"><Award size={20} /></IconButton>
-              <IconButton onClick={() => setShowSettings(true)} color="inherit"><Settings size={20} /></IconButton>
+      <Box sx={{ width: '100%', minHeight: '100vh', overflow: 'auto', backgroundColor: 'background.default' }}>
+        <AppBar position="static" elevation={2}>
+          <Toolbar disableGutters sx={{ px: 3 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 1200, mx: 'auto' }}>
+              <Typography variant="h4" sx={{ fontWeight: 700 }}>{APP_NAME}</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <MuiTooltip title={hasUnsavedExport ? 'Click to export' : 'All saved'}>
+                  <span>
+                    <IconButton onClick={hasUnsavedExport ? saveToFile : undefined} disabled={!hasUnsavedExport} color="inherit">
+                      <Save size={20} />
+                    </IconButton>
+                  </span>
+                </MuiTooltip>
+                <IconButton onClick={() => setShowBadges(true)} color="inherit"><Award size={20} /></IconButton>
+                <IconButton onClick={() => setShowSettings(true)} color="inherit"><Settings size={20} /></IconButton>
+              </Box>
             </Box>
+          </Toolbar>
+        </AppBar>
+
+        <Box sx={{ p: 3 }}>
+          <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
+              <Box>
+                <ToggleButtonGroup color="primary" value={activeView} exclusive onChange={(_e, val) => { if (val) setActiveView(val); }} size="small" aria-label="View">
+                  <ToggleButton value="table">Log</ToggleButton>
+                  <ToggleButton value="stats">Progress</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                  <DatePicker
+                    views={chartMode === 'weekly' ? ['year', 'month', 'day'] : ['year', 'month']}
+                    openTo={chartMode === 'weekly' ? 'day' : 'month'}
+                    value={chartMode === 'weekly' ? dayjs(weekStartDate) : selectedDateValue}
+                    open={pickerOpen}
+                    onClose={() => setPickerOpen(false)}
+                    onChange={(newVal) => {
+                      if (!newVal) return;
+                      const d = (newVal as Dayjs).toDate();
+                      if (chartMode === 'weekly') {
+                        setWeekStartDate(startOfWeek(d, weekStartDay));
+                      } else {
+                        setSelectedDateValue(newVal as Dayjs);
+                        setSelectedMonth(d.getMonth());
+                        setSelectedYear(d.getFullYear());
+                        setWeekStartDate(startOfWeek(d, weekStartDay));
+                        setTimeout(() => scrollToDate(d), 150);
+                      }
+                    }}
+                    maxDate={dayjs()}
+                    slotProps={{
+                      textField: { sx: { display: 'none' } },
+                      popper: { anchorEl: () => calendarAnchorRef.current },
+                    }}
+                  />
+                </LocalizationProvider>
+                <Typography variant="body2" sx={{ fontWeight: 500, color: 'inherit' }}>
+                  {chartMode === 'weekly'
+                    ? formatRange(weekStartDate, new Date(weekStartDate.getFullYear(), weekStartDate.getMonth(), weekStartDate.getDate() + 6))
+                    : dayjs(selectedDateValue).format('MMMM YYYY')}
+                </Typography>
+                <IconButton ref={calendarAnchorRef} size="small" color="inherit" onClick={() => setPickerOpen(true)} aria-label="Open calendar">
+                  <CalendarMonthIcon fontSize="small" />
+                </IconButton>
+                <ToggleButtonGroup color="primary" value={chartMode} exclusive onChange={(_e, val) => { if (val) { setExerciseColumnWidth(val === 'weekly' ? 160 : 100); setChartMode(val); } }} size="small" aria-label="Chart Mode">
+                  <ToggleButton value="weekly">Week</ToggleButton>
+                  <ToggleButton value="monthly">Month</ToggleButton>
+                </ToggleButtonGroup>
+                <IconButton onClick={prevPeriod} color="inherit" size="small" aria-label="Previous period"><ChevronLeftIcon /></IconButton>
+                <IconButton onClick={nextPeriod} color="inherit" size="small" disabled={isAtLatestPeriod} aria-label="Next period"><ChevronRightIcon /></IconButton>
+              </Box>
+            </Box>
+
+            {activeView === 'table' && (
+              <ExerciseTable
+                tableDates={tableDates}
+                exerciseColumnWidth={exerciseColumnWidth}
+                tableWrapperRef={tableWrapperRef}
+                exerciseHeaderRef={exerciseHeaderRef}
+              />
+            )}
+
+            {activeView === 'stats' && (
+              <StatsView
+                weekStartDate={weekStartDate}
+                dates={dates}
+                selectedMonth={selectedMonth}
+                selectedYear={selectedYear}
+              />
+            )}
           </Box>
-        </Toolbar>
-      </AppBar>
-
-      <Box sx={{ p: 3 }}>
-        <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
-            <Box>
-              <ToggleButtonGroup color="primary" value={activeView} exclusive onChange={(_e, val) => { if (val) setActiveView(val); }} size="small" aria-label="View">
-                <ToggleButton value="table">Log</ToggleButton>
-                <ToggleButton value="stats">Progress</ToggleButton>
-              </ToggleButtonGroup>
-            </Box>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-              <LocalizationProvider dateAdapter={AdapterDayjs}>
-                <DatePicker
-                  views={chartMode === 'weekly' ? ['year', 'month', 'day'] : ['year', 'month']}
-                  openTo={chartMode === 'weekly' ? 'day' : 'month'}
-                  value={chartMode === 'weekly' ? dayjs(weekStartDate) : selectedDateValue}
-                  open={pickerOpen}
-                  onClose={() => setPickerOpen(false)}
-                  onChange={(newVal) => {
-                    if (!newVal) return;
-                    const d = (newVal as Dayjs).toDate();
-                    if (chartMode === 'weekly') {
-                      setWeekStartDate(startOfWeek(d, weekStartDay));
-                    } else {
-                      setSelectedDateValue(newVal as Dayjs);
-                      setSelectedMonth(d.getMonth());
-                      setSelectedYear(d.getFullYear());
-                      setWeekStartDate(startOfWeek(d, weekStartDay));
-                      setTimeout(() => scrollToDate(d), 150);
-                    }
-                  }}
-                  maxDate={dayjs()}
-                  slotProps={{
-                    textField: { sx: { display: 'none' } },
-                    popper: { anchorEl: () => calendarAnchorRef.current },
-                  }}
-                />
-              </LocalizationProvider>
-              <Typography variant="body2" sx={{ fontWeight: 500, color: 'inherit' }}>
-                {chartMode === 'weekly'
-                  ? formatRange(weekStartDate, new Date(weekStartDate.getFullYear(), weekStartDate.getMonth(), weekStartDate.getDate() + 6))
-                  : dayjs(selectedDateValue).format('MMMM YYYY')}
-              </Typography>
-              <IconButton ref={calendarAnchorRef} size="small" color="inherit" onClick={() => setPickerOpen(true)} aria-label="Open calendar">
-                <CalendarMonthIcon fontSize="small" />
-              </IconButton>
-              <ToggleButtonGroup color="primary" value={chartMode} exclusive onChange={(_e, val) => { if (val) { setExerciseColumnWidth(val === 'weekly' ? 160 : 100); setChartMode(val); } }} size="small" aria-label="Chart Mode">
-                <ToggleButton value="weekly">Week</ToggleButton>
-                <ToggleButton value="monthly">Month</ToggleButton>
-              </ToggleButtonGroup>
-              <IconButton onClick={prevPeriod} color="inherit" size="small" aria-label="Previous period"><ChevronLeftIcon /></IconButton>
-              <IconButton onClick={nextPeriod} color="inherit" size="small" disabled={isAtLatestPeriod} aria-label="Next period"><ChevronRightIcon /></IconButton>
-            </Box>
-          </Box>
-
-          {activeView === 'table' && (
-            <ExerciseTable
-              exercises={exercises}
-              completions={completions}
-              goalSettings={goalSettings}
-              exerciseGoals={exerciseGoals}
-              exerciseDescriptions={exerciseDescriptions}
-              tableDates={tableDates}
-              chartMode={chartMode}
-              compactView={compactView}
-              exerciseColumnWidth={exerciseColumnWidth}
-              weekStartDay={weekStartDay}
-              tableWrapperRef={tableWrapperRef}
-              exerciseHeaderRef={exerciseHeaderRef}
-              animationsEnabled={animationsEnabled}
-              toggleCompletion={toggleCompletion}
-              onUpdateDescription={(category, exercise, description) => {
-                setExerciseDescriptions(prev => {
-                  const key = `${category}-${exercise}`;
-                  const next = { ...prev };
-                  if (description) next[key] = description;
-                  else delete next[key];
-                  return next;
-                });
-                setHasUnsavedExport(true);
-              }}
-            />
-          )}
-
-          {activeView === 'stats' && (
-            <StatsView
-              exercises={exercises}
-              completions={completions}
-              goalSettings={goalSettings}
-              exerciseGoals={exerciseGoals}
-              chartMode={chartMode}
-              weekStartDate={weekStartDate}
-              weekStartDay={weekStartDay}
-              dates={dates}
-              selectedMonth={selectedMonth}
-              selectedYear={selectedYear}
-            />
-          )}
         </Box>
+
+        <SettingsModal
+          open={showSettings}
+          onClose={() => setShowSettings(false)}
+          onOpenAddCategory={() => setShowAddCategory(true)}
+          onOpenAddExercise={() => setShowAddExercise(true)}
+          savedFileName={savedFileName}
+          exportToJSON={exportToJSON}
+          importFromJSON={importFromJSON}
+        />
+
+        <AddCategoryModal
+          key={showAddCategory ? 'add-category-open' : 'add-category-closed'}
+          open={showAddCategory}
+          onClose={() => setShowAddCategory(false)}
+          onAdd={addCategory}
+        />
+
+        <AddExerciseModal
+          key={showAddExercise ? 'add-exercise-open' : 'add-exercise-closed'}
+          open={showAddExercise}
+          onClose={() => setShowAddExercise(false)}
+          onAdd={addExercise}
+        />
+
+        <BadgesModal
+          open={showBadges}
+          onClose={() => setShowBadges(false)}
+          dates={dates}
+        />
+
+        <Snackbar
+          open={importFeedback.open}
+          autoHideDuration={5000}
+          onClose={() => setImportFeedback(f => ({ ...f, open: false }))}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        >
+          <Alert onClose={() => setImportFeedback(f => ({ ...f, open: false }))} severity={importFeedback.severity} variant="filled" sx={{ width: '100%' }}>
+            {importFeedback.message}
+          </Alert>
+        </Snackbar>
       </Box>
-
-      <SettingsModal
-        open={showSettings}
-        onClose={() => setShowSettings(false)}
-        darkMode={darkMode}
-        setDarkMode={setDarkMode}
-        compactView={compactView}
-        setCompactView={setCompactView}
-        defaultChartMode={defaultChartMode}
-        setDefaultChartMode={setDefaultChartMode}
-        weekStartDay={weekStartDay}
-        setWeekStartDay={handleWeekStartDayChange}
-        setChartMode={setChartMode}
-        animationsEnabled={animationsEnabled}
-        setAnimationsEnabled={setAnimationsEnabled}
-        exercises={exercises}
-        setExercises={setExercises}
-        completions={completions}
-        setCompletions={setCompletions}
-        goalSettings={goalSettings}
-        setGoalSettings={setGoalSettings}
-        exerciseGoals={exerciseGoals}
-        setExerciseGoals={setExerciseGoals}
-        exerciseDescriptions={exerciseDescriptions}
-        setExerciseDescriptions={setExerciseDescriptions}
-        onOpenAddCategory={() => setShowAddCategory(true)}
-        onOpenAddExercise={() => setShowAddExercise(true)}
-        hasUnsavedExport={hasUnsavedExport}
-        savedFileName={savedFileName}
-        exportToJSON={exportToJSON}
-        importFromJSON={importFromJSON}
-      />
-
-      <AddCategoryModal
-        key={showAddCategory ? 'add-category-open' : 'add-category-closed'}
-        open={showAddCategory}
-        onClose={() => setShowAddCategory(false)}
-        onAdd={addCategory}
-      />
-
-      <AddExerciseModal
-        key={showAddExercise ? 'add-exercise-open' : 'add-exercise-closed'}
-        open={showAddExercise}
-        onClose={() => setShowAddExercise(false)}
-        onAdd={addExercise}
-        exercises={exercises}
-      />
-
-      <BadgesModal
-        open={showBadges}
-        onClose={() => setShowBadges(false)}
-        exercises={exercises}
-        completions={completions}
-        dates={dates}
-      />
-
-      <Snackbar
-        open={importFeedback.open}
-        autoHideDuration={5000}
-        onClose={() => setImportFeedback(f => ({ ...f, open: false }))}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={() => setImportFeedback(f => ({ ...f, open: false }))} severity={importFeedback.severity} variant="filled" sx={{ width: '100%' }}>
-          {importFeedback.message}
-        </Alert>
-      </Snackbar>
-    </Box>
     </ThemeProvider>
   );
 };
