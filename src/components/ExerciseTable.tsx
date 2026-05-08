@@ -22,6 +22,7 @@ interface ExerciseTableProps {
   exercises: Record<string, string[]>;
   completions: Record<string, boolean>;
   goalSettings: Record<string, { enabled: boolean; required: number }>;
+  exerciseGoals: Record<string, { override: boolean; required: number; disabled?: boolean }>;
   exerciseDescriptions: Record<string, string>;
   tableDates: Date[];
   chartMode: 'weekly' | 'monthly';
@@ -39,6 +40,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
   exercises,
   completions,
   goalSettings,
+  exerciseGoals,
   exerciseDescriptions,
   tableDates,
   chartMode,
@@ -124,11 +126,12 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
               </TableRow>
               {exerciseList.map((exercise) => {
                 const weeklyCount = calculateWeeklyCount(category, exercise);
-                const weeklyRequired = goalSettings[category]?.required || 3;
+                const eg = exerciseGoals[`${category}-${exercise}`];
+                const showProgress = goalSettings[category]?.enabled && !eg?.disabled;
+                const weeklyRequired = (eg?.override && !eg?.disabled) ? eg.required : (goalSettings[category]?.required || 3);
                 const requiredCount = chartMode === 'monthly'
                   ? weeklyRequired * Math.round(tableDates.length / 7)
                   : weeklyRequired;
-                const showProgress = goalSettings[category]?.enabled;
                 return (
                   <TableRow key={exercise}>
                     <TableCell sx={{ fontWeight: 500, position: 'sticky', left: 0, zIndex: 70, backgroundColor: rowBg, color: 'text.primary', maxWidth: chartMode === 'weekly' ? 200 : 130, pr: 0.5 }}>

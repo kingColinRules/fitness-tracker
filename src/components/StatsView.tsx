@@ -11,6 +11,7 @@ interface StatsViewProps {
   exercises: Record<string, string[]>;
   completions: Record<string, boolean>;
   goalSettings: Record<string, { enabled: boolean; required: number }>;
+  exerciseGoals: Record<string, { override: boolean; required: number; disabled?: boolean }>;
   chartMode: 'weekly' | 'monthly';
   weekStartDate: Date;
   weekStartDay: number;
@@ -87,6 +88,7 @@ const StatsView: React.FC<StatsViewProps> = ({
   exercises,
   completions,
   goalSettings,
+  exerciseGoals,
   chartMode,
   weekStartDate,
   weekStartDay,
@@ -154,48 +156,60 @@ const StatsView: React.FC<StatsViewProps> = ({
         stack: 'total',
         color: theme.palette.chartColors[idx % theme.palette.chartColors.length],
       })),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [periodDates, categories, exercises, completions, theme.palette.chartColors],
   );
 
-  // Gauge — week mode: current week; month mode: across all weeks in the month
+  // Gauge — per-exercise, using override goal if set, else category default
   const { gaugeValue, gaugeNote } = useMemo(() => {
-    const enabled = Object.entries(goalSettings).filter(([cat, g]) => g.enabled && exercises[cat]);
-    if (enabled.length === 0) return { gaugeValue: 0, gaugeNote: '' };
+    const enabledCats = Object.entries(goalSettings).filter(([cat, g]) => g.enabled && exercises[cat]);
+    if (enabledCats.length === 0) return { gaugeValue: 0, gaugeNote: '' };
+
+    const getGoal = (cat: string, ex: string, catRequired: number) => {
+      const eg = exerciseGoals[`${cat}-${ex}`];
+      if (eg?.disabled) return null;
+      return eg?.override ? eg.required : catRequired;
+    };
 
     if (isWeekly) {
-      const met = enabled.filter(([cat, goal]) => {
-        const count = weekDates.reduce((sum, d) => {
-          const dateStr = formatDateKey(d);
-          return sum + (exercises[cat]?.filter(ex => completions[`${cat}-${ex}-${dateStr}`]).length ?? 0);
-        }, 0);
-        return count >= goal.required;
-      }).length;
-      return {
-        gaugeValue: Math.round((met / enabled.length) * 100),
-        gaugeNote: `${met} of ${enabled.length} Goals Completed`,
-      };
-    } else {
-      const weeksInMonth = getWeeksInMonth(selectedYear, selectedMonth, weekStartDay);
-      let totalCombos = 0;
-      let metCombos = 0;
-      weeksInMonth.forEach(weekStart => {
-        const wDates = generateWeekDates(weekStart);
-        enabled.forEach(([cat, goal]) => {
-          const count = wDates.reduce((sum, d) => {
-            const dateStr = formatDateKey(d);
-            return sum + (exercises[cat]?.filter(ex => completions[`${cat}-${ex}-${dateStr}`]).length ?? 0);
-          }, 0);
-          totalCombos++;
-          if (count >= goal.required) metCombos++;
+      let total = 0;
+      let met = 0;
+      enabledCats.forEach(([cat, goal]) => {
+        exercises[cat].forEach(ex => {
+          const required = getGoal(cat, ex, goal.required);
+          if (required === null) return;
+          const count = weekDates.reduce((sum, d) =>
+            sum + (completions[`${cat}-${ex}-${formatDateKey(d)}`] ? 1 : 0), 0);
+          total++;
+          if (count >= required) met++;
         });
       });
       return {
-        gaugeValue: totalCombos > 0 ? Math.round((metCombos / totalCombos) * 100) : 0,
-        gaugeNote: `${metCombos} of ${totalCombos} Goals Completed`,
+        gaugeValue: total > 0 ? Math.round((met / total) * 100) : 0,
+        gaugeNote: `${met} of ${total} Completed`,
+      };
+    } else {
+      const weeksInMonth = getWeeksInMonth(selectedYear, selectedMonth, weekStartDay);
+      let total = 0;
+      let met = 0;
+      weeksInMonth.forEach(weekStart => {
+        const wDates = generateWeekDates(weekStart);
+        enabledCats.forEach(([cat, goal]) => {
+          exercises[cat].forEach(ex => {
+            const required = getGoal(cat, ex, goal.required);
+            if (required === null) return;
+            const count = wDates.reduce((sum, d) =>
+              sum + (completions[`${cat}-${ex}-${formatDateKey(d)}`] ? 1 : 0), 0);
+            total++;
+            if (count >= required) met++;
+          });
+        });
+      });
+      return {
+        gaugeValue: total > 0 ? Math.round((met / total) * 100) : 0,
+        gaugeNote: `${met} of ${total} Completed`,
       };
     }
-  }, [goalSettings, exercises, completions, weekDates, isWeekly, selectedYear, selectedMonth, weekStartDay]);
+  }, [goalSettings, exerciseGoals, exercises, completions, weekDates, isWeekly, selectedYear, selectedMonth, weekStartDay]);
 
   // Right-panel bottom — by category for the current period
   const categoryPeriodData = useMemo(
@@ -309,7 +323,7 @@ const StatsView: React.FC<StatsViewProps> = ({
                 }}
               />
               <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                {periodTotal} of {periodPossible} Exercises Completed
+                {periodTotal} of {periodPossible} Completed
               </Typography>
             </Box>
           </Box>

@@ -8,7 +8,6 @@ import Button from '@mui/material/Button';
 import TextField from '@mui/material/TextField';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
-import Checkbox from '@mui/material/Checkbox';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import { useTheme } from '@mui/material/styles';
@@ -35,6 +34,8 @@ interface SettingsModalProps {
   setCompletions: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   goalSettings: Record<string, { enabled: boolean; required: number }>;
   setGoalSettings: React.Dispatch<React.SetStateAction<Record<string, { enabled: boolean; required: number }>>>;
+  exerciseGoals: Record<string, { override: boolean; required: number; disabled?: boolean }>;
+  setExerciseGoals: React.Dispatch<React.SetStateAction<Record<string, { override: boolean; required: number; disabled?: boolean }>>>;
   exerciseDescriptions: Record<string, string>;
   setExerciseDescriptions: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   onOpenAddCategory: () => void;
@@ -50,6 +51,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   darkMode, setDarkMode, compactView, setCompactView, defaultChartMode, setDefaultChartMode,
   weekStartDay, setWeekStartDay, setChartMode, animationsEnabled, setAnimationsEnabled,
   exercises, setExercises, completions, setCompletions, goalSettings, setGoalSettings,
+  exerciseGoals, setExerciseGoals,
   exerciseDescriptions, setExerciseDescriptions,
   onOpenAddCategory, onOpenAddExercise,
   savedFileName, exportToJSON, importFromJSON,
@@ -57,9 +59,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [activeTab, setActiveTab] = useState(0);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
+  const [editCategoryGoalEnabled, setEditCategoryGoalEnabled] = useState(false);
+  const [editCategoryGoalRequired, setEditCategoryGoalRequired] = useState(3);
   const [editingExercise, setEditingExercise] = useState<{ category: string; name: string } | null>(null);
   const [editExerciseName, setEditExerciseName] = useState('');
   const [editExerciseDescription, setEditExerciseDescription] = useState('');
+  const [editExerciseOverride, setEditExerciseOverride] = useState(false);
+  const [editExerciseOverrideRequired, setEditExerciseOverrideRequired] = useState(1);
+  const [editExerciseNoGoal, setEditExerciseNoGoal] = useState(false);
   const [draggedItem, setDraggedItem] = useState<{ category: string; index: number } | null>(null);
   const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
   const theme = useTheme();
@@ -100,6 +107,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const startEditCategory = (category: string) => {
     setEditingCategory(category);
     setEditCategoryName(category);
+    setEditCategoryGoalEnabled(goalSettings[category]?.enabled ?? false);
+    setEditCategoryGoalRequired(goalSettings[category]?.required ?? 3);
   };
 
   const saveEditCategory = () => {
@@ -134,8 +143,21 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           }
         });
         setExerciseDescriptions(newDescriptions);
+        const newExerciseGoals: Record<string, { override: boolean; required: number }> = {};
+        Object.keys(exerciseGoals).forEach(key => {
+          if (key.startsWith(`${editingCategory}-`)) {
+            newExerciseGoals[key.replace(`${editingCategory}-`, `${newKey}-`)] = exerciseGoals[key];
+          } else {
+            newExerciseGoals[key] = exerciseGoals[key];
+          }
+        });
+        setExerciseGoals(newExerciseGoals);
       }
     }
+    setGoalSettings(prev => ({
+      ...prev,
+      [newKey ?? editingCategory!]: { enabled: editCategoryGoalEnabled, required: editCategoryGoalRequired },
+    }));
     setEditingCategory(null);
     setEditCategoryName('');
   };
@@ -165,6 +187,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setEditingExercise({ category, name: exerciseName });
     setEditExerciseName(exerciseName);
     setEditExerciseDescription(exerciseDescriptions[`${category}-${exerciseName}`] || '');
+    const eg = exerciseGoals[`${category}-${exerciseName}`];
+    setEditExerciseNoGoal(eg?.disabled ?? false);
+    setEditExerciseOverride(!eg?.disabled && (eg?.override ?? false));
+    setEditExerciseOverrideRequired(eg?.disabled ? (goalSettings[category]?.required ?? 3) : (eg?.required ?? goalSettings[category]?.required ?? 3));
   };
 
   const saveEditExercise = () => {
@@ -197,6 +223,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       }
       setExerciseDescriptions(newDescriptions);
     }
+    const oldKey = `${editingExercise!.category}-${editingExercise!.name}`;
+    const newKey = `${editingExercise!.category}-${editExerciseName.trim() || editingExercise!.name}`;
+    setExerciseGoals(prev => {
+      const next = { ...prev };
+      if (oldKey !== newKey) delete next[oldKey];
+      if (editExerciseNoGoal) next[newKey] = { override: true, required: editExerciseOverrideRequired, disabled: true };
+      else if (editExerciseOverride) next[newKey] = { override: true, required: editExerciseOverrideRequired };
+      else delete next[newKey];
+      return next;
+    });
     setEditingExercise(null);
     setEditExerciseName('');
     setEditExerciseDescription('');
@@ -213,6 +249,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       const newDescriptions = { ...exerciseDescriptions };
       delete newDescriptions[`${category}-${exerciseName}`];
       setExerciseDescriptions(newDescriptions);
+      setExerciseGoals(prev => {
+        const next = { ...prev };
+        delete next[`${category}-${exerciseName}`];
+        return next;
+      });
     }
   };
 
@@ -239,17 +280,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     newExercises[targetCategory] = categoryExercises;
     setExercises(newExercises);
     setDraggedItem(null);
-  };
-
-  const toggleGoalSetting = (category: string) => {
-    setGoalSettings(prev => ({ ...prev, [category]: { ...prev[category], enabled: !prev[category].enabled } }));
-  };
-
-  const updateGoalRequired = (category: string, value: string) => {
-    const numValue = parseInt(value) || 1;
-    const maxValue = exercises[category].length * 7;
-    const clampedValue = Math.min(Math.max(1, numValue), maxValue);
-    setGoalSettings(prev => ({ ...prev, [category]: { ...prev[category], required: clampedValue } }));
   };
 
   const handleClearData = () => {
@@ -284,17 +314,52 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <Button onClick={onOpenAddCategory} variant="contained" startIcon={<Plus size={18} />} sx={{ mb: 1 }}>Add Category</Button>
               <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {Object.keys(exercises).map(category => (
-                  <Box key={category} draggable onDragStart={(e) => handleCategoryDragStart(e, category)} onDragOver={handleCategoryDragOver} onDrop={(e) => handleCategoryDrop(e, category)} sx={{ display: 'flex', alignItems: 'center', gap: 1, p: 1, borderRadius: 1, border: 1, borderColor: 'divider', backgroundColor: 'background.paper', cursor: 'grab' }}>
-                    <GripVertical style={{ color: theme.palette.text.secondary, flexShrink: 0 }} size={16} />
+                  <Box key={category} draggable onDragStart={(e) => handleCategoryDragStart(e, category)} onDragOver={handleCategoryDragOver} onDrop={(e) => handleCategoryDrop(e, category)} sx={{ display: 'flex', alignItems: editingCategory === category ? 'flex-start' : 'center', gap: 1, p: 1, borderRadius: 1, border: 1, borderColor: 'divider', backgroundColor: 'background.paper', cursor: 'grab' }}>
+                    <GripVertical style={{ color: theme.palette.text.secondary, flexShrink: 0, marginTop: editingCategory === category ? 6 : 0 }} size={16} />
                     {editingCategory === category ? (
                       <>
-                        <TextField value={editCategoryName} onChange={(e) => setEditCategoryName(e.target.value)} variant="outlined" size="small" sx={{ flex: 1 }} />
-                        <Button onClick={saveEditCategory} variant="contained" sx={{ ml: 1 }}>Save</Button>
-                        <Button onClick={() => setEditingCategory(null)} variant="outlined" sx={{ ml: 1 }}>Cancel</Button>
+                        <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                          <TextField value={editCategoryName} onChange={(e) => setEditCategoryName(e.target.value)} variant="outlined" size="small" fullWidth />
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="body2" sx={{ color: 'text.secondary' }}>Default Goal:</Typography>
+                            <TextField
+                              type="number"
+                              value={editCategoryGoalEnabled ? editCategoryGoalRequired : ''}
+                              placeholder="None"
+                              onChange={(e) => {
+                                const val = e.target.value;
+                                const n = parseInt(val);
+                                if (!val || n <= 0) {
+                                  setEditCategoryGoalEnabled(false);
+                                } else {
+                                  setEditCategoryGoalRequired(n);
+                                  setEditCategoryGoalEnabled(true);
+                                }
+                              }}
+                              size="small"
+                              sx={{ width: 90 }}
+                              slotProps={{ htmlInput: { min: 0 } }}
+                            />
+                            {editCategoryGoalEnabled && (
+                              <Typography variant="body2" sx={{ color: 'text.secondary' }}>/ week</Typography>
+                            )}
+                          </Box>
+                        </Box>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                          <Button onClick={saveEditCategory} variant="contained" size="small">Save</Button>
+                          <Button onClick={() => setEditingCategory(null)} variant="outlined" size="small">Cancel</Button>
+                        </Box>
                       </>
                     ) : (
                       <>
-                        <Typography sx={{ flex: 1, fontWeight: 600 }}>{category}</Typography>
+                        <Box sx={{ flex: 1 }}>
+                          <Typography sx={{ fontWeight: 600 }}>{category}</Typography>
+                          {goalSettings[category]?.enabled && (
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                              Default Goal: {goalSettings[category].required} / week
+                            </Typography>
+                          )}
+                        </Box>
                         <IconButton onClick={() => startEditCategory(category)}><Edit2 size={18} /></IconButton>
                         <IconButton onClick={() => deleteCategory(category)}><Trash2 size={18} /></IconButton>
                       </>
@@ -324,6 +389,42 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                                   <TextField value={editExerciseName} onChange={(e) => setEditExerciseName(e.target.value)} size="small" placeholder="Exercise name" fullWidth />
                                   <TextField value={editExerciseDescription} onChange={(e) => setEditExerciseDescription(e.target.value)} size="small" placeholder="Description (optional)" multiline rows={2} fullWidth />
+                                  {goalSettings[editingExercise!.category]?.enabled && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>Goal:</Typography>
+                                      <TextField
+                                        type="number"
+                                        value={editExerciseNoGoal ? '' : editExerciseOverrideRequired}
+                                        placeholder="None"
+                                        onChange={(e) => {
+                                          const val = e.target.value;
+                                          const n = parseInt(val);
+                                          if (!val || n <= 0) {
+                                            setEditExerciseNoGoal(true);
+                                            setEditExerciseOverride(false);
+                                          } else {
+                                            setEditExerciseOverrideRequired(n);
+                                            setEditExerciseOverride(true);
+                                            setEditExerciseNoGoal(false);
+                                          }
+                                        }}
+                                        size="small"
+                                        sx={{ width: 90 }}
+                                        slotProps={{ htmlInput: { min: 0 } }}
+                                      />
+                                      {!editExerciseNoGoal && (
+                                        <>
+                                          <Typography variant="body2" sx={{ color: 'text.secondary' }}>/ week</Typography>
+                                          {!editExerciseOverride && (
+                                            <Typography variant="body2" sx={{ color: 'text.disabled' }}>(default)</Typography>
+                                          )}
+                                          {editExerciseOverride && (
+                                            <Typography variant="body2" component="span" onClick={() => { setEditExerciseOverride(false); setEditExerciseOverrideRequired(goalSettings[editingExercise!.category]?.required ?? 3); }} sx={{ color: 'primary.main', cursor: 'pointer', textDecoration: 'underline' }}>Reset to category default</Typography>
+                                          )}
+                                        </>
+                                      )}
+                                    </Box>
+                                  )}
                                 </Box>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                   <Button onClick={saveEditExercise} variant="contained" size="small">Save</Button>
@@ -335,10 +436,16 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                 <Box sx={{ flex: 1 }}>
                                   <Typography>{exercise}</Typography>
                                   {exerciseDescriptions[`${category}-${exercise}`] && (
-                                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontStyle: 'italic' }}>
                                       {exerciseDescriptions[`${category}-${exercise}`]}
                                     </Typography>
                                   )}
+                                  {goalSettings[category]?.enabled && (() => {
+                                    const eg = exerciseGoals[`${category}-${exercise}`];
+                                    if (eg?.disabled) return <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>No goal</Typography>;
+                                    if (eg?.override) return <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>Goal: {eg.required} / week</Typography>;
+                                    return <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>Goal: {goalSettings[category].required} / week</Typography>;
+                                  })()}
                                 </Box>
                                 <IconButton onClick={() => startEditExercise(category, exercise)}><Edit2 size={16} /></IconButton>
                                 <IconButton onClick={() => deleteExercise(category, exercise)}><Trash2 size={16} /></IconButton>
@@ -353,25 +460,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               </Box>
             </Box>
 
-            {/* Goals */}
-            <Box>
-              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Goals</Typography>
-              <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>Set how many exercises must be completed each week</Typography>
-              {Object.keys(exercises).map(category => (
-                <Box key={category} sx={{ mb: 2, p: 2, borderRadius: 1, border: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Checkbox checked={goalSettings[category]?.enabled ?? false} onChange={() => toggleGoalSetting(category)} size="small" />
-                    <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>{category}</Typography>
-                  </Box>
-                  {goalSettings[category]?.enabled && (
-                    <Box sx={{ ml: 2, display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Typography sx={{ color: 'text.secondary' }}>Exercises required per week:</Typography>
-                      <TextField type="number" slotProps={{ htmlInput: { min: 1, max: exercises[category].length * 7 } }} value={goalSettings[category]?.required ?? 3} onChange={(e) => updateGoalRequired(category, e.target.value)} size="small" sx={{ width: 80 }} />
-                    </Box>
-                  )}
-                </Box>
-              ))}
-            </Box>
 
           </Box>
           {activeTab === 1 && (

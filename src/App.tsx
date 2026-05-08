@@ -117,6 +117,13 @@ const ExerciseTracker = () => {
     } catch { /* ignore */ }
     return {};
   });
+  const [exerciseGoals, setExerciseGoals] = useState<Record<string, { override: boolean; required: number; disabled?: boolean }>>(() => {
+    try {
+      const s = localStorage.getItem('exerciseGoals');
+      if (s) return JSON.parse(s);
+    } catch { /* ignore */ }
+    return {};
+  });
 
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const exerciseHeaderRef = useRef<HTMLTableCellElement>(null);
@@ -189,6 +196,14 @@ const ExerciseTracker = () => {
       console.error('Storage error:', e);
     }
   }, [exerciseDescriptions]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('exerciseGoals', JSON.stringify(exerciseGoals));
+    } catch (e) {
+      console.error('Storage error:', e);
+    }
+  }, [exerciseGoals]);
 
   // Persist settings
   useEffect(() => {
@@ -349,10 +364,10 @@ const ExerciseTracker = () => {
     reader.readAsText(file);
   };
 
-  const addCategory = (name: string) => {
+  const addCategory = (name: string, goalEnabled: boolean, goalRequired: number) => {
     if (name && !exercises[name]) {
       setExercises(prev => ({ ...prev, [name]: [] }));
-      setGoalSettings(prev => ({ ...prev, [name]: { enabled: true, required: 3 } }));
+      setGoalSettings(prev => ({ ...prev, [name]: { enabled: goalEnabled, required: goalRequired } }));
       setShowAddCategory(false);
     }
   };
@@ -444,6 +459,7 @@ const ExerciseTracker = () => {
               exercises={exercises}
               completions={completions}
               goalSettings={goalSettings}
+              exerciseGoals={exerciseGoals}
               exerciseDescriptions={exerciseDescriptions}
               tableDates={tableDates}
               chartMode={chartMode}
@@ -472,6 +488,7 @@ const ExerciseTracker = () => {
               exercises={exercises}
               completions={completions}
               goalSettings={goalSettings}
+              exerciseGoals={exerciseGoals}
               chartMode={chartMode}
               weekStartDate={weekStartDate}
               weekStartDay={weekStartDay}
@@ -503,6 +520,8 @@ const ExerciseTracker = () => {
         setCompletions={setCompletions}
         goalSettings={goalSettings}
         setGoalSettings={setGoalSettings}
+        exerciseGoals={exerciseGoals}
+        setExerciseGoals={setExerciseGoals}
         exerciseDescriptions={exerciseDescriptions}
         setExerciseDescriptions={setExerciseDescriptions}
         onOpenAddCategory={() => setShowAddCategory(true)}

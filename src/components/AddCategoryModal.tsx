@@ -10,16 +10,20 @@ import TextField from '@mui/material/TextField';
 interface AddCategoryModalProps {
   open: boolean;
   onClose: () => void;
-  onAdd: (name: string) => void;
+  onAdd: (name: string, goalEnabled: boolean, goalRequired: number) => void;
 }
 
 const AddCategoryModal: React.FC<AddCategoryModalProps> = ({ open, onClose, onAdd }) => {
   const [name, setName] = useState('');
+  const [goalEnabled, setGoalEnabled] = useState(true);
+  const [goalRequired, setGoalRequired] = useState(3);
 
   const handleAdd = () => {
     if (name.trim()) {
-      onAdd(name.trim());
+      onAdd(name.trim(), goalEnabled, goalRequired);
       setName('');
+      setGoalEnabled(true);
+      setGoalRequired(3);
     }
   };
 
@@ -30,9 +34,35 @@ const AddCategoryModal: React.FC<AddCategoryModalProps> = ({ open, onClose, onAd
           <Typography variant="h6" sx={{ fontWeight: 700 }}>Add Category</Typography>
           <IconButton onClick={onClose}><X size={24} /></IconButton>
         </Box>
-        <Box>
-          <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: 'text.secondary' }}>Category Name</Typography>
-          <TextField value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Cardio" fullWidth />
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 600, mb: 1, color: 'text.secondary' }}>Category Name</Typography>
+            <TextField value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g., Cardio" fullWidth onKeyDown={(e) => { if (e.key === 'Enter') handleAdd(); }} />
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>Default Goal:</Typography>
+            <TextField
+              type="number"
+              value={goalEnabled ? goalRequired : ''}
+              placeholder="None"
+              onChange={(e) => {
+                const val = e.target.value;
+                const n = parseInt(val);
+                if (!val || n <= 0) {
+                  setGoalEnabled(false);
+                } else {
+                  setGoalRequired(n);
+                  setGoalEnabled(true);
+                }
+              }}
+              size="small"
+              sx={{ width: 90 }}
+              slotProps={{ htmlInput: { min: 0 } }}
+            />
+            {goalEnabled && (
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>/ week</Typography>
+            )}
+          </Box>
         </Box>
         <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
           <Button onClick={onClose} variant="outlined">Cancel</Button>
