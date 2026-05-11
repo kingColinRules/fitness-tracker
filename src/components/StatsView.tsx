@@ -3,8 +3,9 @@ import { SparkLineChart } from '@mui/x-charts/SparkLineChart';
 import { BarChart } from '@mui/x-charts/BarChart';
 import { Gauge, gaugeClasses } from '@mui/x-charts/Gauge';
 import Box from '@mui/material/Box';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
-import { useTheme } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import { formatDateKey, generateWeekDates, startOfWeek } from '../utils/dateUtils';
 import { useAppStore } from '../store';
 
@@ -43,9 +44,11 @@ interface StatCardProps {
   sparkData: number[];
   color: string;
   plotType?: 'line' | 'bar';
+  sparkDescription?: string;
+  sparkValueFormatter?: (value: number | null) => string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ label, value, sparkData, color, plotType = 'line' }) => (
+const StatCard: React.FC<StatCardProps> = ({ label, value, sparkData, color, plotType = 'line', sparkDescription, sparkValueFormatter }) => (
   <Box
     sx={{
       flex: 1,
@@ -65,14 +68,21 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sparkData, color, plo
       <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary' }}>
         {value}
       </Typography>
-      <SparkLineChart
-        data={sparkData}
-        height={50}
-        width={120}
-        color={color}
-        plotType={plotType}
-        curve="natural"
-      />
+      <Tooltip title={sparkDescription ?? ''} placement="top" arrow>
+        <Box>
+          <SparkLineChart
+            data={sparkData}
+            height={50}
+            width={120}
+            color={color}
+            plotType={plotType}
+            curve="natural"
+            showTooltip
+            showHighlight
+            valueFormatter={sparkValueFormatter}
+          />
+        </Box>
+      </Tooltip>
     </Box>
   </Box>
 );
@@ -215,16 +225,46 @@ const StatsView: React.FC<StatsViewProps> = ({
 
   const goalsConfigured = Object.values(goalSettings).some(g => g.enabled);
 
+  const consistencyPct = isWeekly
+    ? (weekActiveDays / 7) * 100
+    : dates.length > 0 ? (activeDays / dates.length) * 100 : 0;
+
+  const overallScore = useMemo(() => {
+    if (goalsConfigured) {
+      return Math.round(gaugeValue * 0.5 + consistencyPct * 0.3 + exercisesGaugeValue * 0.2);
+    }
+    return Math.round(consistencyPct * 0.5 + exercisesGaugeValue * 0.5);
+  }, [gaugeValue, consistencyPct, exercisesGaugeValue, goalsConfigured]);
+
+  const scoreSparkData = useMemo(() => {
+    const dailyTotals = isWeekly ? weekDailyTotals : monthDailyTotals;
+    let runningCompletions = 0;
+    let runningActiveDays = 0;
+    return dailyTotals.map((count, i) => {
+      runningCompletions += count;
+      if (count > 0) runningActiveDays++;
+      const daysElapsed = i + 1;
+      const runningVolume = totalExercises > 0 ? (runningCompletions / (totalExercises * daysElapsed)) * 100 : 0;
+      const runningConsistency = (runningActiveDays / daysElapsed) * 100;
+      if (goalsConfigured) {
+        return Math.round(gaugeValue * 0.5 + runningConsistency * 0.3 + runningVolume * 0.2);
+      }
+      return Math.round(runningConsistency * 0.5 + runningVolume * 0.5);
+    });
+  }, [isWeekly, weekDailyTotals, monthDailyTotals, totalExercises, gaugeValue, goalsConfigured]);
+
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       {/* Stat cards */}
       <Box sx={{ display: 'flex', gap: 2 }}>
         <StatCard
-          label={isWeekly ? 'This Week' : 'This Month'}
+          label="Exercises Done"
           value={isWeekly ? `${weekTotal}/${totalExercises * 7}` : `${monthTotal}/${totalExercises * dates.length}`}
           sparkData={isWeekly ? weekDailyTotals : monthDailyTotals}
           color={theme.palette.primary.main}
+          sparkDescription="Total exercises completed per day"
+          sparkValueFormatter={v => `${v ?? 0} exercise${v !== 1 ? 's' : ''}`}
         />
         <StatCard
           label="Active Days"
@@ -232,12 +272,24 @@ const StatsView: React.FC<StatsViewProps> = ({
           sparkData={isWeekly ? weekActiveSparkData : monthActiveSparkData}
           plotType="bar"
           color={theme.palette.success.main}
+          sparkDescription="Active days — 1 means at least one exercise was completed"
+          sparkValueFormatter={v => (v ? 'Active' : 'Rest day')}
         />
         <StatCard
           label="Longest Streak"
           value={bestStreak}
           sparkData={streakSparkData}
           color={theme.palette.warning.main}
+          sparkDescription="Running streak length — resets to 0 on any day with no activity"
+          sparkValueFormatter={v => (v ? `${v} day streak` : 'No streak')}
+        />
+        <StatCard
+          label="Score"
+          value={`${overallScore}/100`}
+          sparkData={scoreSparkData}
+          color={theme.palette.info.main}
+          sparkDescription="Cumulative completion rate — running total of exercises done vs. total possible so far"
+          sparkValueFormatter={v => `${v ?? 0} / 100`}
         />
       </Box>
 
@@ -271,8 +323,8 @@ const StatsView: React.FC<StatsViewProps> = ({
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper', textAlign: 'center' }}>
               <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5 }}>
-                Goals
-              </Typography>
+                Goals Met
+</Typography>
               {goalsConfigured ? (
                 <>
                   <Gauge
@@ -299,8 +351,8 @@ const StatsView: React.FC<StatsViewProps> = ({
 
             <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper', textAlign: 'center' }}>
               <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5 }}>
-                Exercises
-              </Typography>
+                Completion Rate
+</Typography>
               <Gauge
                 value={exercisesGaugeValue}
                 startAngle={-110}
@@ -345,6 +397,69 @@ const StatsView: React.FC<StatsViewProps> = ({
             </Box>
             )}
           </Box>
+        </Box>
+      </Box>
+
+      {/* Heatmap */}
+      <Box sx={{ borderRadius: 2, boxShadow: 2, p: 2.5, backgroundColor: 'background.paper' }}>
+        <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500, mb: 1.5 }}>
+          Heatmap
+        </Typography>
+
+        {/* Day of week headers */}
+        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', mb: '4px' }}>
+          {Array.from({ length: 7 }, (_, i) => DAY_NAMES[(weekStartDay + i) % 7]).map(day => (
+            <Typography key={day} variant="caption" sx={{ textAlign: 'center', color: 'text.secondary', fontWeight: 500, fontSize: '0.65rem' }}>
+              {day}
+            </Typography>
+          ))}
+        </Box>
+
+        {/* Calendar grid */}
+        {(() => {
+          const dailyTotals = isWeekly ? weekDailyTotals : monthDailyTotals;
+          const maxCount = Math.max(...dailyTotals, 1);
+          const offset = isWeekly ? 0 : (new Date(selectedYear, selectedMonth, 1).getDay() - weekStartDay + 7) % 7;
+          const todayStr = formatDateKey(new Date());
+          return (
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+              {Array.from({ length: offset }).map((_, i) => (
+                <Box key={`empty-${i}`} sx={{ height: 20 }} />
+              ))}
+              {periodDates.map((date, idx) => {
+                const count = dailyTotals[idx];
+                const intensity = count / maxCount;
+                const isToday = formatDateKey(date) === todayStr;
+                return (
+                  <Tooltip key={idx} title={`${date.getDate()} — ${count} exercise${count !== 1 ? 's' : ''}`} placement="top" arrow>
+                    <Box sx={{
+                      height: 20,
+                      borderRadius: '3px',
+                      backgroundColor: count === 0
+                        ? 'action.hover'
+                        : alpha(theme.palette.primary.main, 0.15 + intensity * 0.85),
+                      border: isToday ? `2px solid ${theme.palette.primary.main}` : '2px solid transparent',
+                      cursor: 'default',
+                    }} />
+                  </Tooltip>
+                );
+              })}
+            </Box>
+          );
+        })()}
+
+        {/* Legend */}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, mt: 1.5 }}>
+          <Typography variant="caption" sx={{ color: 'text.secondary', mr: 0.5 }}>Less</Typography>
+          {[0, 0.25, 0.5, 0.75, 1].map(intensity => (
+            <Box key={intensity} sx={{
+              width: 12,
+              height: 12,
+              borderRadius: 0.5,
+              backgroundColor: intensity === 0 ? 'action.hover' : alpha(theme.palette.primary.main, 0.15 + intensity * 0.85),
+            }} />
+          ))}
+          <Typography variant="caption" sx={{ color: 'text.secondary', ml: 0.5 }}>More</Typography>
         </Box>
       </Box>
     </Box>
