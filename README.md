@@ -6,8 +6,13 @@ A React + TypeScript app for tracking workouts, built with Vite.
 
 ## Features
 
-- Track workouts and sessions
-- View charts and summaries (Recharts)
+- Log workouts by category and exercise, with optional per-entry descriptions
+- Per-exercise goals (defaulting to the category-level goal)
+- Weekly and monthly views with progress tracking
+- Charts, a stats/summary page, and an activity heatmap
+- Badges for milestones, with confetti celebrations
+- Settings panel with animations toggle
+- Global state managed with Zustand
 
 ## Prerequisites
 
@@ -66,10 +71,12 @@ npm run lint
 
 ## Key dependencies
 
-- [MUI](https://mui.com/) — UI components
-- [Recharts](https://recharts.org/) — charts
+- [MUI](https://mui.com/) — UI components, icons, charts (`@mui/x-charts`), and date pickers (`@mui/x-date-pickers`)
+- [Recharts](https://recharts.org/) — additional charts
+- [Zustand](https://zustand-demo.pmnd.rs/) — global state management
 - [dayjs](https://day.js.org/) — date handling
-- [Playwright](https://playwright.dev/) — end-to-end testing
+- [lucide-react](https://lucide.dev/) — icons
+- [canvas-confetti](https://github.com/catdad/canvas-confetti) — badge celebrations
 
 ## Helpful notes
 
