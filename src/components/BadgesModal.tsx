@@ -1,5 +1,5 @@
 import React from 'react';
-import { X } from 'lucide-react';
+import CloseIcon from '@mui/icons-material/Close';
 import Box from '@mui/material/Box';
 import Modal from '@mui/material/Modal';
 import Typography from '@mui/material/Typography';
@@ -46,7 +46,7 @@ const BadgesModal: React.FC<BadgesModalProps> = ({ open, onClose, dates }) => {
       <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', borderRadius: 2, boxShadow: 6, p: 3, maxWidth: 960, width: 'calc(100% - 32px)', maxHeight: '90vh', overflowY: 'auto', backgroundColor: 'background.paper', color: 'text.primary' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Typography variant="h5" sx={{ fontWeight: 700 }}>Achievement Badges</Typography>
-          <IconButton onClick={onClose}><X size={24} /></IconButton>
+          <IconButton onClick={onClose}><CloseIcon sx={{ fontSize: 24 }} /></IconButton>
         </Box>
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr', gap: 2 }}>
           {badges.map((badge, index) => (

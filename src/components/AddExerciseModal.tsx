@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
+import CloseIcon from '@mui/icons-material/Close';
 import Box from '@mui/material/Box';
 import Modal from '@mui/material/Modal';
 import Typography from '@mui/material/Typography';
@@ -32,7 +32,7 @@ const AddExerciseModal: React.FC<AddExerciseModalProps> = ({ open, onClose, onAd
       <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', borderRadius: 2, boxShadow: 6, p: 3, maxWidth: 480, width: 'calc(100% - 32px)', backgroundColor: 'background.paper', color: 'text.primary' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>Add Exercise</Typography>
-          <IconButton onClick={onClose}><X size={24} /></IconButton>
+          <IconButton onClick={onClose}><CloseIcon sx={{ fontSize: 24 }} /></IconButton>
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Box>

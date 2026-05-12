@@ -1,5 +1,11 @@
 import React, { useState } from 'react';
-import { X, Plus, Trash2, Edit2, GripVertical, Download, Upload } from 'lucide-react';
+import CloseIcon from '@mui/icons-material/Close';
+import AddIcon from '@mui/icons-material/Add';
+import DeleteIcon from '@mui/icons-material/Delete';
+import EditIcon from '@mui/icons-material/Edit';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import DownloadIcon from '@mui/icons-material/Download';
+import UploadIcon from '@mui/icons-material/Upload';
 import Box from '@mui/material/Box';
 import Modal from '@mui/material/Modal';
 import Dialog from '@mui/material/Dialog';
@@ -293,7 +299,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', borderRadius: 2, boxShadow: 6, width: 'calc(100% - 32px)', maxWidth: 960, display: 'flex', flexDirection: 'column', backgroundColor: 'background.paper', color: 'text.primary', height: '90vh' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 3, pb: 0, flexShrink: 0 }}>
           <Typography variant="h5" sx={{ fontWeight: 700 }}>Settings</Typography>
-          <IconButton onClick={onClose} sx={{ p: 1 }}><X size={24} /></IconButton>
+          <IconButton onClick={onClose} sx={{ p: 1 }}><CloseIcon sx={{ fontSize: 24 }} /></IconButton>
         </Box>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
           <Tabs value={activeTab} onChange={(_e, val) => setActiveTab(val)} sx={{ px: 3 }}>
@@ -308,11 +314,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* Manage Categories */}
             <Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Categories</Typography>
-              <Button onClick={onOpenAddCategory} variant="contained" startIcon={<Plus size={18} />} sx={{ mb: 1 }}>Add Category</Button>
+              <Button onClick={onOpenAddCategory} variant="contained" startIcon={<AddIcon sx={{ fontSize: 18 }} />} sx={{ mb: 1 }}>Add Category</Button>
               <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {Object.keys(exercises).map(category => (
                   <Box key={category} draggable onDragStart={(e) => handleCategoryDragStart(e, category)} onDragOver={handleCategoryDragOver} onDrop={(e) => handleCategoryDrop(e, category)} sx={{ display: 'flex', alignItems: editingCategory === category ? 'flex-start' : 'center', gap: 1, p: 1, borderRadius: 1, border: 1, borderColor: 'divider', backgroundColor: 'background.paper', cursor: 'grab' }}>
-                    <GripVertical style={{ color: theme.palette.text.secondary, flexShrink: 0, marginTop: editingCategory === category ? 6 : 0 }} size={16} />
+                    <DragIndicatorIcon sx={{ color: 'text.secondary', flexShrink: 0, marginTop: editingCategory === category ? 6 : 0, fontSize: 16 }} />
                     {editingCategory === category ? (
                       <>
                         <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -357,8 +363,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             </Typography>
                           )}
                         </Box>
-                        <IconButton onClick={() => startEditCategory(category)}><Edit2 size={18} /></IconButton>
-                        <IconButton onClick={() => deleteCategory(category)}><Trash2 size={18} /></IconButton>
+                        <IconButton onClick={() => startEditCategory(category)}><EditIcon sx={{ fontSize: 18 }} /></IconButton>
+                        <IconButton onClick={() => deleteCategory(category)}><DeleteIcon sx={{ fontSize: 18 }} /></IconButton>
                       </>
                     )}
                   </Box>
@@ -369,7 +375,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             {/* Manage Exercises */}
             <Box>
               <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1, color: 'text.primary' }}>Exercises</Typography>
-              <Button onClick={onOpenAddExercise} variant="contained" startIcon={<Plus size={18} />} sx={{ mb: 1 }}>Add Exercise</Button>
+              <Button onClick={onOpenAddExercise} variant="contained" startIcon={<AddIcon sx={{ fontSize: 18 }} />} sx={{ mb: 1 }}>Add Exercise</Button>
               <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {Object.keys(exercises).map(category => (
                   <Box key={category} sx={{ borderRadius: 1, p: 1.5, border: 1, borderColor: 'divider', backgroundColor: 'background.paper' }}>
@@ -380,7 +386,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       ) : (
                         exercises[category].map((exercise, index) => (
                           <Box key={exercise} draggable onDragStart={(e) => handleDragStart(e, category, index)} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, category, index)} sx={{ display: 'flex', alignItems: editingExercise?.category === category && editingExercise?.name === exercise ? 'flex-start' : 'center', gap: 1, p: 1, borderRadius: 1, cursor: 'grab', '&:hover': { backgroundColor: 'action.hover' } }}>
-                            <GripVertical style={{ color: theme.palette.text.secondary, marginTop: editingExercise?.category === category && editingExercise?.name === exercise ? 6 : 0 }} size={compactView ? 12 : 16} />
+                            <DragIndicatorIcon sx={{ color: 'text.secondary', marginTop: editingExercise?.category === category && editingExercise?.name === exercise ? 6 : 0, fontSize: compactView ? 12 : 16 }} />
                             {editingExercise?.category === category && editingExercise?.name === exercise ? (
                               <>
                                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
@@ -444,8 +450,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                                     return <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>Goal: {goalSettings[category].required} / week</Typography>;
                                   })()}
                                 </Box>
-                                <IconButton onClick={() => startEditExercise(category, exercise)}><Edit2 size={16} /></IconButton>
-                                <IconButton onClick={() => deleteExercise(category, exercise)}><Trash2 size={16} /></IconButton>
+                                <IconButton onClick={() => startEditExercise(category, exercise)}><EditIcon sx={{ fontSize: 16 }} /></IconButton>
+                                <IconButton onClick={() => deleteExercise(category, exercise)}><DeleteIcon sx={{ fontSize: 16 }} /></IconButton>
                               </>
                             )}
                           </Box>
@@ -508,8 +514,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </Typography>
               </Box>
               <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                <Button onClick={exportToJSON} variant="contained" color="success" startIcon={<Download size={18} />}>Export</Button>
-                <Button component="label" variant="contained" color="secondary" startIcon={<Upload size={18} />}>
+                <Button onClick={exportToJSON} variant="contained" color="success" startIcon={<DownloadIcon sx={{ fontSize: 18 }} />}>Export</Button>
+                <Button component="label" variant="contained" color="secondary" startIcon={<UploadIcon sx={{ fontSize: 18 }} />}>
                   Import
                   <input type="file" accept=".json" onChange={importFromJSON} hidden />
                 </Button>

@@ -72,10 +72,8 @@ npm run lint
 ## Key dependencies
 
 - [MUI](https://mui.com/) — UI components, icons, charts (`@mui/x-charts`), and date pickers (`@mui/x-date-pickers`)
-- [Recharts](https://recharts.org/) — additional charts
 - [Zustand](https://zustand-demo.pmnd.rs/) — global state management
 - [dayjs](https://day.js.org/) — date handling
-- [lucide-react](https://lucide.dev/) — icons
 - [canvas-confetti](https://github.com/catdad/canvas-confetti) — badge celebrations
 
 ## Helpful notes

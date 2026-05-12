@@ -20,10 +20,8 @@
     "@mui/x-date-pickers": "^8.27.2",
     "canvas-confetti": "^1.9.4",
     "dayjs": "^1.11.20",
-    "lucide-react": "^0.575.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "recharts": "^3.7.0",
     "zustand": "^5.0.13"
   },
   "devDependencies": {

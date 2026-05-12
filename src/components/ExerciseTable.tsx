@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import confetti from 'canvas-confetti';
-import { Check } from 'lucide-react';
+import CheckIcon from '@mui/icons-material/Check';
 import TableContainer from '@mui/material/TableContainer';
 import Table from '@mui/material/Table';
 import TableHead from '@mui/material/TableHead';
@@ -181,7 +181,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                               '&:hover': { backgroundColor: completed ? 'success.dark' : undefined },
                             }}
                           >
-                            {completed && chartMode !== 'monthly' ? <Check color={theme.palette.primary.contrastText} size={compactView ? 14 : 20} /> : null}
+                            {completed && chartMode !== 'monthly' ? <CheckIcon sx={{ color: theme.palette.primary.contrastText, fontSize: compactView ? 14 : 20 }} /> : null}
                           </Button>
                         </TableCell>
                       );

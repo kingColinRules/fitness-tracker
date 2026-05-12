@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Settings, Award, Save } from 'lucide-react';
+import SettingsIcon from '@mui/icons-material/SettingsOutlined';
+import EmojiEventsIcon from '@mui/icons-material/EmojiEventsOutlined';
+import SaveIcon from '@mui/icons-material/SaveOutlined';
 import AppBar from '@mui/material/AppBar';
 import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
@@ -295,12 +297,12 @@ const ExerciseTracker = () => {
                 <MuiTooltip title={hasUnsavedExport ? 'Click to export' : 'All saved'}>
                   <span>
                     <IconButton onClick={hasUnsavedExport ? saveToFile : undefined} disabled={!hasUnsavedExport} color="inherit">
-                      <Save size={20} />
+                      <SaveIcon sx={{ fontSize: 20 }} />
                     </IconButton>
                   </span>
                 </MuiTooltip>
-                <IconButton onClick={() => setShowBadges(true)} color="inherit"><Award size={20} /></IconButton>
-                <IconButton onClick={() => setShowSettings(true)} color="inherit"><Settings size={20} /></IconButton>
+                <IconButton onClick={() => setShowBadges(true)} color="inherit"><EmojiEventsIcon sx={{ fontSize: 20 }} /></IconButton>
+                <IconButton onClick={() => setShowSettings(true)} color="inherit"><SettingsIcon sx={{ fontSize: 20 }} /></IconButton>
               </Box>
             </Box>
           </Toolbar>
