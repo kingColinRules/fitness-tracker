@@ -20,7 +20,6 @@ import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
-import { useTheme } from '@mui/material/styles';
 import { getLastExportInfo } from '../utils/fileSystem';
 import { DEFAULT_EXERCISES } from '../constants';
 import { useAppStore } from '../store';
@@ -62,8 +61,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [draggedItem, setDraggedItem] = useState<{ category: string; index: number } | null>(null);
   const [draggedCategory, setDraggedCategory] = useState<string | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{ message: string; onConfirm: () => void } | null>(null);
-  const theme = useTheme();
-
   const handleCategoryDragStart = (e: React.DragEvent, category: string) => {
     setDraggedCategory(category);
     e.dataTransfer.effectAllowed = 'move';

@@ -63,7 +63,6 @@ const ChartView: React.FC<ChartViewProps> = ({
         series={buildSeries(dayDates)}
         height={400}
         sx={{ width: '100%' }}
-        slotProps={{ legend: { hidden: false } }}
       />
     </Box>
   );

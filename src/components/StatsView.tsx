@@ -6,7 +6,7 @@ import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
-import { formatDateKey, generateWeekDates, startOfWeek } from '../utils/dateUtils';
+import { formatDateKey, localDateStr, generateWeekDates, startOfWeek } from '../utils/dateUtils';
 import { useAppStore } from '../store';
 
 interface StatsViewProps {
@@ -80,6 +80,7 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sparkData, color, plo
             showTooltip
             showHighlight
             valueFormatter={sparkValueFormatter}
+            margin={{ top: 8, bottom: 4, left: 4, right: 4 }}
           />
         </Box>
       </Tooltip>
@@ -102,6 +103,8 @@ const StatsView: React.FC<StatsViewProps> = ({
 
   const weekDates = useMemo(() => generateWeekDates(weekStartDate), [weekStartDate]);
 
+  const todayStr = localDateStr(new Date());
+
   // Weekly per-day totals
   const weekDailyTotals = useMemo(
     () => weekDates.map(d => countDay(completions, exercises, formatDateKey(d))),
@@ -109,7 +112,12 @@ const StatsView: React.FC<StatsViewProps> = ({
   );
   const weekTotal = weekDailyTotals.reduce((a, b) => a + b, 0);
   const weekActiveDays = weekDailyTotals.filter(n => n > 0).length;
-  const weekActiveSparkData = weekDailyTotals.map(n => (n > 0 ? 1 : 0));
+  const weekSparkTotals = useMemo(
+    () => weekDates.filter(d => localDateStr(d) <= todayStr).map(d => countDay(completions, exercises, formatDateKey(d))),
+    [weekDates, completions, exercises],
+  );
+  const weekActiveSparkData = weekSparkTotals.map(n => (n > 0 ? 1 : 0));
+  const weekCumulativeTotals = weekSparkTotals.reduce<number[]>((acc, v) => { acc.push((acc[acc.length - 1] ?? 0) + v); return acc; }, []);
   const totalExercises = categories.reduce((sum, cat) => sum + exercises[cat].length, 0);
 
   // Monthly per-day totals
@@ -119,27 +127,35 @@ const StatsView: React.FC<StatsViewProps> = ({
   );
   const monthTotal = monthDailyTotals.reduce((a, b) => a + b, 0);
   const activeDays = monthDailyTotals.filter(n => n > 0).length;
-  const monthActiveSparkData = monthDailyTotals.map(n => (n > 0 ? 1 : 0));
+  const monthSparkTotals = useMemo(
+    () => dates.filter(d => localDateStr(d) <= todayStr).map(d => countDay(completions, exercises, formatDateKey(d))),
+    [dates, completions, exercises],
+  );
+  const monthActiveSparkData = monthSparkTotals.map(n => (n > 0 ? 1 : 0));
+  const monthCumulativeTotals = monthSparkTotals.reduce<number[]>((acc, v) => { acc.push((acc[acc.length - 1] ?? 0) + v); return acc; }, []);
 
-  // Exercises completed gauge
-  const periodTotal = isWeekly ? weekTotal : monthTotal;
-  const periodPossible = isWeekly ? totalExercises * 7 : totalExercises * dates.length;
-  const exercisesGaugeValue = periodPossible > 0 ? Math.round((periodTotal / periodPossible) * 100) : 0;
+  const daysElapsed = isWeekly ? weekSparkTotals.length : monthSparkTotals.length;
+  const consistencyGaugeValue = daysElapsed > 0
+    ? Math.round(((isWeekly ? weekActiveDays : activeDays) / daysElapsed) * 100)
+    : 0;
 
   // Main stacked bar chart
   const periodDates = isWeekly ? weekDates : dates;
 
-  // Longest consecutive streak within the selected period
+  // Longest consecutive streak within the selected period (up to today)
   const { bestStreak, streakSparkData } = useMemo(() => {
     let best = 0;
     let current = 0;
-    const sparkData = periodDates.map(d => {
+    const sparkData: number[] = [];
+    for (const d of periodDates) {
+      if (localDateStr(d) > todayStr) break;
       const hasAny = Object.keys(exercises).some(cat =>
         exercises[cat].some(ex => completions[`${cat}-${ex}-${formatDateKey(d)}`]),
       );
-      if (hasAny) { best = Math.max(best, ++current); return current; }
-      else { current = 0; return 0; }
-    });
+      if (hasAny) { best = Math.max(best, ++current); sparkData.push(current); }
+      else if (localDateStr(d) === todayStr) break;
+      else { current = 0; sparkData.push(0); }
+    }
     return { bestStreak: best, streakSparkData: sparkData };
   }, [periodDates, exercises, completions]);
   const mainXLabels = periodDates.map(d =>
@@ -193,6 +209,8 @@ const StatsView: React.FC<StatsViewProps> = ({
       let met = 0;
       weeksInMonth.forEach(weekStart => {
         const wDates = generateWeekDates(weekStart);
+        const daysInMonth = wDates.filter(d => d.getMonth() === selectedMonth && d.getFullYear() === selectedYear).length;
+        if (daysInMonth < 7) return;
         enabledCats.forEach(([cat, goal]) => {
           exercises[cat].forEach(ex => {
             const required = getGoal(cat, ex, goal.required);
@@ -225,19 +243,9 @@ const StatsView: React.FC<StatsViewProps> = ({
 
   const goalsConfigured = Object.values(goalSettings).some(g => g.enabled);
 
-  const consistencyPct = isWeekly
-    ? (weekActiveDays / 7) * 100
-    : dates.length > 0 ? (activeDays / dates.length) * 100 : 0;
-
-  const overallScore = useMemo(() => {
-    if (goalsConfigured) {
-      return Math.round(gaugeValue * 0.5 + consistencyPct * 0.3 + exercisesGaugeValue * 0.2);
-    }
-    return Math.round(consistencyPct * 0.5 + exercisesGaugeValue * 0.5);
-  }, [gaugeValue, consistencyPct, exercisesGaugeValue, goalsConfigured]);
 
   const scoreSparkData = useMemo(() => {
-    const dailyTotals = isWeekly ? weekDailyTotals : monthDailyTotals;
+    const dailyTotals = isWeekly ? weekSparkTotals : monthSparkTotals;
     let runningCompletions = 0;
     let runningActiveDays = 0;
     return dailyTotals.map((count, i) => {
@@ -251,7 +259,9 @@ const StatsView: React.FC<StatsViewProps> = ({
       }
       return Math.round(runningConsistency * 0.5 + runningVolume * 0.5);
     });
-  }, [isWeekly, weekDailyTotals, monthDailyTotals, totalExercises, gaugeValue, goalsConfigured]);
+  }, [isWeekly, weekSparkTotals, monthSparkTotals, totalExercises, gaugeValue, goalsConfigured]);
+
+  const overallScore = scoreSparkData.at(-1) ?? 0;
 
 
   return (
@@ -260,15 +270,15 @@ const StatsView: React.FC<StatsViewProps> = ({
       <Box sx={{ display: 'flex', gap: 2 }}>
         <StatCard
           label="Exercises Done"
-          value={isWeekly ? `${weekTotal}/${totalExercises * 7}` : `${monthTotal}/${totalExercises * dates.length}`}
-          sparkData={isWeekly ? weekDailyTotals : monthDailyTotals}
+          value={isWeekly ? `${weekTotal}` : `${monthTotal}`}
+          sparkData={isWeekly ? weekCumulativeTotals : monthCumulativeTotals}
           color={theme.palette.primary.main}
-          sparkDescription="Total exercises completed per day"
-          sparkValueFormatter={v => `${v ?? 0} exercise${v !== 1 ? 's' : ''}`}
+          sparkDescription="Cumulative exercises completed so far"
+          sparkValueFormatter={v => `${v ?? 0} exercise${v !== 1 ? 's' : ''} total`}
         />
         <StatCard
           label="Active Days"
-          value={isWeekly ? `${weekActiveDays} / 7` : `${activeDays} / ${dates.length}`}
+          value={isWeekly ? weekActiveDays : activeDays}
           sparkData={isWeekly ? weekActiveSparkData : monthActiveSparkData}
           plotType="bar"
           color={theme.palette.success.main}
@@ -321,10 +331,11 @@ const StatsView: React.FC<StatsViewProps> = ({
         <Box sx={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
           {/* Goals + Exercises gauges side by side */}
           <Box sx={{ display: 'flex', gap: 2 }}>
+            <Tooltip title="% of exercises that met their frequency goal this period" placement="bottom" arrow>
             <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper', textAlign: 'center' }}>
               <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5 }}>
                 Goals Met
-</Typography>
+              </Typography>
               {goalsConfigured ? (
                 <>
                   <Gauge
@@ -348,13 +359,15 @@ const StatsView: React.FC<StatsViewProps> = ({
                 </Typography>
               )}
             </Box>
+            </Tooltip>
 
+            <Tooltip title="% of days elapsed where you completed at least one exercise" placement="bottom" arrow>
             <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper', textAlign: 'center' }}>
               <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5 }}>
-                Completion Rate
-</Typography>
+                Consistency
+              </Typography>
               <Gauge
-                value={exercisesGaugeValue}
+                value={consistencyGaugeValue}
                 startAngle={-110}
                 endAngle={110}
                 height={120}
@@ -365,9 +378,10 @@ const StatsView: React.FC<StatsViewProps> = ({
                 }}
               />
               <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
-                {periodTotal} of {periodPossible} Completed
+                {isWeekly ? weekActiveDays : activeDays} of {daysElapsed} days active
               </Typography>
             </Box>
+            </Tooltip>
           </Box>
 
           {/* By Category for the current period */}
@@ -377,33 +391,35 @@ const StatsView: React.FC<StatsViewProps> = ({
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>No exercises configured</Typography>
             ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-              {categories.map((cat, idx) => {
-                const completed = categoryPeriodData[idx];
-                const possible = exercises[cat].length * periodDates.length;
-                const pct = possible > 0 ? (completed / possible) * 100 : 0;
-                const color = theme.palette.chartColors[idx % theme.palette.chartColors.length];
-                return (
-                  <Box key={cat}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                      <Typography variant="body2" sx={{ color: 'text.primary' }}>{cat}</Typography>
-                      <Typography variant="body2" sx={{ color: 'text.secondary' }}>{completed} / {possible}</Typography>
+              {(() => {
+                const maxCompleted = Math.max(...categoryPeriodData, 1);
+                return categories.map((cat, idx) => {
+                  const completed = categoryPeriodData[idx];
+                  const pct = (completed / maxCompleted) * 100;
+                  const color = theme.palette.chartColors[idx % theme.palette.chartColors.length];
+                  return (
+                    <Box key={cat}>
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                        <Typography variant="body2" sx={{ color: 'text.primary' }}>{cat}</Typography>
+                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>{completed}</Typography>
+                      </Box>
+                      <Box sx={{ height: 8, borderRadius: 4, backgroundColor: 'divider' }}>
+                        <Box sx={{ height: '100%', borderRadius: 4, width: `${pct}%`, backgroundColor: color }} />
+                      </Box>
                     </Box>
-                    <Box sx={{ height: 8, borderRadius: 4, backgroundColor: 'divider' }}>
-                      <Box sx={{ height: '100%', borderRadius: 4, width: `${pct}%`, backgroundColor: color }} />
-                    </Box>
-                  </Box>
-                );
-              })}
+                  );
+                });
+              })()}
             </Box>
             )}
           </Box>
         </Box>
       </Box>
 
-      {/* Heatmap */}
+      {/* Activity */}
       <Box sx={{ borderRadius: 2, boxShadow: 2, p: 2.5, backgroundColor: 'background.paper' }}>
         <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500, mb: 1.5 }}>
-          Heatmap
+          Activity
         </Typography>
 
         {/* Day of week headers */}
@@ -420,7 +436,6 @@ const StatsView: React.FC<StatsViewProps> = ({
           const dailyTotals = isWeekly ? weekDailyTotals : monthDailyTotals;
           const maxCount = Math.max(...dailyTotals, 1);
           const offset = isWeekly ? 0 : (new Date(selectedYear, selectedMonth, 1).getDay() - weekStartDay + 7) % 7;
-          const todayStr = formatDateKey(new Date());
           return (
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
               {Array.from({ length: offset }).map((_, i) => (
@@ -429,7 +444,7 @@ const StatsView: React.FC<StatsViewProps> = ({
               {periodDates.map((date, idx) => {
                 const count = dailyTotals[idx];
                 const intensity = count / maxCount;
-                const isToday = formatDateKey(date) === todayStr;
+                const isToday = localDateStr(date) === todayStr;
                 return (
                   <Tooltip key={idx} title={`${date.getDate()} — ${count} exercise${count !== 1 ? 's' : ''}`} placement="top" arrow>
                     <Box sx={{
