@@ -323,7 +323,7 @@ const ExerciseTracker = () => {
                 <ToggleButtonGroup color="primary" value={activeView} exclusive onChange={(_e, val) => { if (val) setActiveView(val); }} size="small" aria-label="View">
                   <ToggleButton value="table">Log</ToggleButton>
                   <ToggleButton value="schedule">Schedule</ToggleButton>
-                  <ToggleButton value="stats">Stats</ToggleButton>
+                  <ToggleButton value="stats">Insights</ToggleButton>
                 </ToggleButtonGroup>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
