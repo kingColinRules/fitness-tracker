@@ -17,6 +17,7 @@ import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import SelfImprovementIcon from '@mui/icons-material/SelfImprovement';
 import AccessibilityNewIcon from '@mui/icons-material/AccessibilityNew';
 import { alpha, useTheme } from '@mui/material/styles';
+import type {} from '../theme';
 import { useAppStore } from '../store';
 import type { WeeklyScheduleEntry } from '../store';
 import { formatDateKey } from '../utils/dateUtils';

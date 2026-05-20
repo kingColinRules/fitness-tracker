@@ -22,7 +22,6 @@ import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import dayjs, { Dayjs } from 'dayjs';
 import { createAppTheme } from './theme';
-import { APP_NAME } from './constants';
 import { useAppStore } from './store';
 
 import { generateDates, generateWeekDates, startOfWeek, formatDateKey, formatRange } from './utils/dateUtils';
@@ -38,7 +37,7 @@ import BadgesModal from './components/BadgesModal';
 const ExerciseTracker = () => {
   const {
     exercises, completions, exerciseDescriptions, exerciseGoals, goalSettings, weeklySchedule,
-    darkMode, compactView, chartMode, weekStartDay, defaultChartMode, animationsEnabled, showScheduleInLog,
+    darkMode, compactView, chartMode, weekStartDay, defaultChartMode, animationsEnabled, showScheduleInLog, useCustomAppName, appName,
     hasUnsavedExport, setHasUnsavedExport, setChartMode,
     setExercises, setCompletions, setGoalSettings, setExerciseDescriptions,
   } = useAppStore();
@@ -121,9 +120,9 @@ const ExerciseTracker = () => {
   // Persist settings
   useEffect(() => {
     try {
-      localStorage.setItem('exerciseSettings', JSON.stringify({ darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled, showScheduleInLog }));
+      localStorage.setItem('exerciseSettings', JSON.stringify({ darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled, showScheduleInLog, useCustomAppName, appName }));
     } catch (e) { console.error('Storage error:', e); }
-  }, [darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled, showScheduleInLog]);
+  }, [darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled, showScheduleInLog, useCustomAppName, appName]);
 
   const scrollToTodayImmediate = () => {
     const todayStr = formatDateKey(new Date());
@@ -299,7 +298,7 @@ const ExerciseTracker = () => {
         <AppBar position="static" elevation={2}>
           <Toolbar disableGutters sx={{ px: 3 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 1200, mx: 'auto' }}>
-              <Typography variant="h4" sx={{ fontWeight: 700 }}>{APP_NAME}</Typography>
+              <Typography variant="h4" onClick={() => window.location.reload()} sx={{ fontWeight: 700, cursor: 'pointer' }}>{useCustomAppName ? appName : 'Fitness Tracker'}</Typography>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <MuiTooltip title={hasUnsavedExport ? 'Click to export' : 'All saved'}>
                   <span>

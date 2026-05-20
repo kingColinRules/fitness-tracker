@@ -53,6 +53,8 @@ interface AppState {
   weekStartDay: number;
   animationsEnabled: boolean;
   showScheduleInLog: boolean;
+  useCustomAppName: boolean;
+  appName: string;
 
   // App state
   hasUnsavedExport: boolean;
@@ -71,6 +73,8 @@ interface AppState {
   setWeekStartDay: (v: number) => void;
   setAnimationsEnabled: (v: boolean) => void;
   setShowScheduleInLog: (v: boolean) => void;
+  setUseCustomAppName: (v: boolean) => void;
+  setAppName: (v: string) => void;
   setHasUnsavedExport: (v: boolean) => void;
 
   // Actions
@@ -102,6 +106,8 @@ export const useAppStore = create<AppState>()((set) => ({
   weekStartDay: readSetting<number>('weekStartDay', 1),
   animationsEnabled: readSetting<boolean>('animationsEnabled', true),
   showScheduleInLog: readSetting<boolean>('showScheduleInLog', true),
+  useCustomAppName: readSetting<boolean>('useCustomAppName', false),
+  appName: readSetting<string>('appName', 'Fitness Tracker'),
   hasUnsavedExport: initHasUnsavedExport(),
 
   setExercises: (v) => set(s => ({ exercises: applyUpdater(s.exercises, v) })),
@@ -117,6 +123,8 @@ export const useAppStore = create<AppState>()((set) => ({
   setWeekStartDay: (v) => set({ weekStartDay: v }),
   setAnimationsEnabled: (v) => set({ animationsEnabled: v }),
   setShowScheduleInLog: (v) => set({ showScheduleInLog: v }),
+  setUseCustomAppName: (v) => set({ useCustomAppName: v }),
+  setAppName: (v) => set({ appName: v }),
   setHasUnsavedExport: (v) => set({ hasUnsavedExport: v }),
 
   toggleCompletion: (category, exercise, dateStr) => {

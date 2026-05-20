@@ -44,6 +44,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     defaultChartMode, setDefaultChartMode, weekStartDay, setWeekStartDay,
     animationsEnabled, setAnimationsEnabled,
     showScheduleInLog, setShowScheduleInLog,
+    useCustomAppName, setUseCustomAppName, appName, setAppName,
     exercises, setExercises, completions, setCompletions,
     goalSettings, setGoalSettings, exerciseGoals, setExerciseGoals,
     exerciseDescriptions, setExerciseDescriptions,
@@ -465,6 +466,22 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           </Box>
           {activeTab === 1 && (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, p: 1 }}>
+                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Custom App Name</Typography>
+                <ToggleButtonGroup color="primary" value={useCustomAppName ? 'on' : 'off'} exclusive onChange={(_e, val) => { if (val) setUseCustomAppName(val === 'on'); }} size="small" aria-label="Custom app name">
+                  <ToggleButton value="on">On</ToggleButton>
+                  <ToggleButton value="off">Off</ToggleButton>
+                </ToggleButtonGroup>
+                {useCustomAppName && (
+                  <TextField
+                    value={appName}
+                    onChange={(e) => setAppName(e.target.value || 'Fitness Tracker')}
+                    size="small"
+                    placeholder="Fitness Tracker"
+                    sx={{ maxWidth: 280 }}
+                  />
+                )}
+              </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
                 <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Theme</Typography>
                 <ToggleButtonGroup color="primary" value={darkMode ? 'dark' : 'light'} exclusive onChange={(_e, val) => { if (val) setDarkMode(val === 'dark'); }} size="small" aria-label="Theme">
@@ -502,7 +519,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </ToggleButtonGroup>
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
-                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Schedule Indicators on Log</Typography>
+                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Show Schedule in Log</Typography>
                 <ToggleButtonGroup color="primary" value={showScheduleInLog ? 'on' : 'off'} exclusive onChange={(_e, val) => { if (val) setShowScheduleInLog(val === 'on'); }} size="small" aria-label="Schedule indicators">
                   <ToggleButton value="on">On</ToggleButton>
                   <ToggleButton value="off">Off</ToggleButton>
