@@ -45,9 +45,10 @@ export function generateExportJSON(
   completions: Record<string, boolean>,
   goalSettings: Record<string, { enabled: boolean; required: number }>,
   exerciseDescriptions: Record<string, string>,
+  weeklySchedule: Record<string, { category: string; name: string }[]>,
 ): string {
   return JSON.stringify(
-    { version: 1, exportedAt: new Date().toISOString(), exercises, goalSettings, completions, exerciseDescriptions },
+    { version: 1, exportedAt: new Date().toISOString(), exercises, goalSettings, completions, exerciseDescriptions, weeklySchedule },
     null,
     2,
   );

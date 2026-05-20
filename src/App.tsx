@@ -186,7 +186,7 @@ const ExerciseTracker = () => {
 
   const writeJSON = async (handle: FileSystemFileHandle) => {
     const state = useAppStore.getState();
-    const json = generateExportJSON(state.exercises, state.completions, state.goalSettings, state.exerciseDescriptions);
+    const json = generateExportJSON(state.exercises, state.completions, state.goalSettings, state.exerciseDescriptions, state.weeklySchedule);
     const writable = await handle.createWritable();
     await writable.write(json);
     await writable.close();
@@ -196,7 +196,7 @@ const ExerciseTracker = () => {
 
   const exportToJSON = async () => {
     const state = useAppStore.getState();
-    const json = generateExportJSON(state.exercises, state.completions, state.goalSettings, state.exerciseDescriptions);
+    const json = generateExportJSON(state.exercises, state.completions, state.goalSettings, state.exerciseDescriptions, state.weeklySchedule);
     if (!('showSaveFilePicker' in window)) {
       const blob = new Blob([json], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
@@ -263,11 +263,13 @@ const ExerciseTracker = () => {
         completions: Record<string, boolean>;
         goalSettings?: Record<string, { enabled: boolean; required: number }>;
         exerciseDescriptions?: Record<string, string>;
+        weeklySchedule?: Record<string, { category: string; name: string }[]>;
       };
       setExercises(data.exercises);
       setCompletions(data.completions);
       if (data.goalSettings) setGoalSettings(data.goalSettings);
       if (data.exerciseDescriptions) setExerciseDescriptions(data.exerciseDescriptions);
+      if (data.weeklySchedule) useAppStore.setState({ weeklySchedule: data.weeklySchedule });
       setHasUnsavedExport(true);
       setImportFeedback({
         open: true,
