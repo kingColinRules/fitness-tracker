@@ -27,6 +27,8 @@ function readSetting<T>(key: string, fallback: T): T {
 
 export type ExerciseGoals = Record<string, { override: boolean; required: number; disabled?: boolean }>;
 export type GoalSettings = Record<string, { enabled: boolean; required: number }>;
+export type WeeklyScheduleEntry = { category: string; name: string };
+export type WeeklySchedule = Record<string, WeeklyScheduleEntry[]>;
 
 const DEFAULT_GOAL_SETTINGS: GoalSettings = {
   weight: { enabled: true, required: 3 },
@@ -41,6 +43,7 @@ interface AppState {
   exerciseDescriptions: Record<string, string>;
   exerciseGoals: ExerciseGoals;
   goalSettings: GoalSettings;
+  weeklySchedule: WeeklySchedule;
 
   // Settings
   darkMode: boolean;
@@ -49,6 +52,7 @@ interface AppState {
   chartMode: 'weekly' | 'monthly';
   weekStartDay: number;
   animationsEnabled: boolean;
+  showScheduleInLog: boolean;
 
   // App state
   hasUnsavedExport: boolean;
@@ -59,12 +63,14 @@ interface AppState {
   setExerciseDescriptions: (v: Updater<Record<string, string>>) => void;
   setExerciseGoals: (v: Updater<ExerciseGoals>) => void;
   setGoalSettings: (v: Updater<GoalSettings>) => void;
+  setWeeklySchedule: (v: Updater<WeeklySchedule>) => void;
   setDarkMode: (v: boolean) => void;
   setCompactView: (v: boolean) => void;
   setDefaultChartMode: (v: 'weekly' | 'monthly') => void;
   setChartMode: (v: 'weekly' | 'monthly') => void;
   setWeekStartDay: (v: number) => void;
   setAnimationsEnabled: (v: boolean) => void;
+  setShowScheduleInLog: (v: boolean) => void;
   setHasUnsavedExport: (v: boolean) => void;
 
   // Actions
@@ -84,6 +90,7 @@ const initHasUnsavedExport = (): boolean => {
 
 export const useAppStore = create<AppState>()((set) => ({
   exercises: readLS<Record<string, string[]>>('exerciseList') ?? DEFAULT_EXERCISES,
+  weeklySchedule: readLS<WeeklySchedule>('weeklySchedule') ?? {},
   completions: readLS<Record<string, boolean>>('exerciseCompletions') ?? {},
   exerciseDescriptions: readLS<Record<string, string>>('exerciseDescriptions') ?? {},
   exerciseGoals: readLS<ExerciseGoals>('exerciseGoals') ?? {},
@@ -94,6 +101,7 @@ export const useAppStore = create<AppState>()((set) => ({
   chartMode: readSetting<'weekly' | 'monthly'>('defaultChartMode', 'weekly'),
   weekStartDay: readSetting<number>('weekStartDay', 1),
   animationsEnabled: readSetting<boolean>('animationsEnabled', true),
+  showScheduleInLog: readSetting<boolean>('showScheduleInLog', true),
   hasUnsavedExport: initHasUnsavedExport(),
 
   setExercises: (v) => set(s => ({ exercises: applyUpdater(s.exercises, v) })),
@@ -101,12 +109,14 @@ export const useAppStore = create<AppState>()((set) => ({
   setExerciseDescriptions: (v) => set(s => ({ exerciseDescriptions: applyUpdater(s.exerciseDescriptions, v) })),
   setExerciseGoals: (v) => set(s => ({ exerciseGoals: applyUpdater(s.exerciseGoals, v) })),
   setGoalSettings: (v) => set(s => ({ goalSettings: applyUpdater(s.goalSettings, v) })),
+  setWeeklySchedule: (v) => set(s => ({ weeklySchedule: applyUpdater(s.weeklySchedule, v) })),
   setDarkMode: (v) => set({ darkMode: v }),
   setCompactView: (v) => set({ compactView: v }),
   setDefaultChartMode: (v) => set({ defaultChartMode: v, chartMode: v }),
   setChartMode: (v) => set({ chartMode: v }),
   setWeekStartDay: (v) => set({ weekStartDay: v }),
   setAnimationsEnabled: (v) => set({ animationsEnabled: v }),
+  setShowScheduleInLog: (v) => set({ showScheduleInLog: v }),
   setHasUnsavedExport: (v) => set({ hasUnsavedExport: v }),
 
   toggleCompletion: (category, exercise, dateStr) => {

@@ -29,6 +29,7 @@ import { generateDates, generateWeekDates, startOfWeek, formatDateKey, formatRan
 import { getStoredHandle, storeHandle, generateExportJSON } from './utils/fileSystem';
 import ExerciseTable from './components/ExerciseTable';
 import StatsView from './components/StatsView';
+import ScheduleView from './components/ScheduleView';
 import SettingsModal from './components/SettingsModal';
 import AddCategoryModal from './components/AddCategoryModal';
 import AddExerciseModal from './components/AddExerciseModal';
@@ -36,8 +37,8 @@ import BadgesModal from './components/BadgesModal';
 
 const ExerciseTracker = () => {
   const {
-    exercises, completions, exerciseDescriptions, exerciseGoals, goalSettings,
-    darkMode, compactView, chartMode, weekStartDay, defaultChartMode, animationsEnabled,
+    exercises, completions, exerciseDescriptions, exerciseGoals, goalSettings, weeklySchedule,
+    darkMode, compactView, chartMode, weekStartDay, defaultChartMode, animationsEnabled, showScheduleInLog,
     hasUnsavedExport, setHasUnsavedExport, setChartMode,
     setExercises, setCompletions, setGoalSettings, setExerciseDescriptions,
   } = useAppStore();
@@ -111,12 +112,18 @@ const ExerciseTracker = () => {
     catch (e) { console.error('Storage error:', e); }
   }, [exerciseGoals]);
 
+  // Persist weekly schedule
+  useEffect(() => {
+    try { localStorage.setItem('weeklySchedule', JSON.stringify(weeklySchedule)); }
+    catch (e) { console.error('Storage error:', e); }
+  }, [weeklySchedule]);
+
   // Persist settings
   useEffect(() => {
     try {
-      localStorage.setItem('exerciseSettings', JSON.stringify({ darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled }));
+      localStorage.setItem('exerciseSettings', JSON.stringify({ darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled, showScheduleInLog }));
     } catch (e) { console.error('Storage error:', e); }
-  }, [darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled]);
+  }, [darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled, showScheduleInLog]);
 
   const scrollToTodayImmediate = () => {
     const todayStr = formatDateKey(new Date());
@@ -314,7 +321,8 @@ const ExerciseTracker = () => {
               <Box>
                 <ToggleButtonGroup color="primary" value={activeView} exclusive onChange={(_e, val) => { if (val) setActiveView(val); }} size="small" aria-label="View">
                   <ToggleButton value="table">Log</ToggleButton>
-                  <ToggleButton value="stats">Progress</ToggleButton>
+                  <ToggleButton value="schedule">Schedule</ToggleButton>
+                  <ToggleButton value="stats">Stats</ToggleButton>
                 </ToggleButtonGroup>
               </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -379,6 +387,8 @@ const ExerciseTracker = () => {
                 selectedYear={selectedYear}
               />
             )}
+
+            {activeView === 'schedule' && <ScheduleView />}
           </Box>
         </Box>
 

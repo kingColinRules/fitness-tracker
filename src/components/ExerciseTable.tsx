@@ -12,12 +12,14 @@ import Box from '@mui/material/Box';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import Popover from '@mui/material/Popover';
+import Tooltip from '@mui/material/Tooltip';
 import TextField from '@mui/material/TextField';
 import { useTheme, alpha } from '@mui/material/styles';
 import dayjs from 'dayjs';
 import { formatDateKey, isToday, isFutureDate } from '../utils/dateUtils';
 import { isCompleted as isCompletedUtil } from '../utils/completionUtils';
 import { useAppStore } from '../store';
+
 
 interface ExerciseTableProps {
   tableDates: Date[];
@@ -33,8 +35,8 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
   exerciseHeaderRef,
 }) => {
   const {
-    exercises, completions, goalSettings, exerciseGoals, exerciseDescriptions,
-    chartMode, compactView, weekStartDay, animationsEnabled,
+    exercises, completions, goalSettings, exerciseGoals, exerciseDescriptions, weeklySchedule,
+    chartMode, compactView, weekStartDay, animationsEnabled, showScheduleInLog,
     toggleCompletion, updateExerciseDescription,
   } = useAppStore();
   const theme = useTheme();
@@ -181,8 +183,11 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                       const dateStr = formatDateKey(date);
                       const completed = isCompleted(category, exercise, dateStr);
                       const isFuture = isFutureDate(date);
+                      const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()];
+                      const scheduled = (weeklySchedule[dayName] ?? []).some(e => e.category === category && e.name === exercise);
                       return (
                         <TableCell key={date.toISOString()} data-date-cell align="center" sx={{ borderColor: 'divider', backgroundColor: weekTint(date), px: chartMode === 'monthly' ? 0.25 : 0.5, py: 0.5 }}>
+                          <Tooltip title={scheduled && !completed && !isFuture && showScheduleInLog ? 'Scheduled for today' : ''} placement="top" arrow>
                           <Button
                             onClick={(e) => {
                               if (isFuture) return;
@@ -215,12 +220,17 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                                 ? theme.palette.action.disabledBackground
                                 : completed
                                   ? 'success.main'
-                                  : theme.palette.action.hover,
+                                  : scheduled && showScheduleInLog
+                                    ? alpha(theme.palette.primary.main, 0.1)
+                                    : theme.palette.action.hover,
                               '&:hover': { backgroundColor: completed ? 'success.dark' : undefined },
                             }}
                           >
-                            {completed ? <CheckIcon sx={{ color: theme.palette.primary.contrastText, fontSize: compactView ? 14 : chartMode === 'monthly' ? 16 : 20 }} /> : null}
+                            {completed
+                              ? <CheckIcon sx={{ color: theme.palette.primary.contrastText, fontSize: compactView ? 14 : chartMode === 'monthly' ? 16 : 20 }} />
+                              : null}
                           </Button>
+                          </Tooltip>
                         </TableCell>
                       );
                     })}

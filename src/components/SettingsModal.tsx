@@ -43,6 +43,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     darkMode, setDarkMode, compactView, setCompactView,
     defaultChartMode, setDefaultChartMode, weekStartDay, setWeekStartDay,
     animationsEnabled, setAnimationsEnabled,
+    showScheduleInLog, setShowScheduleInLog,
     exercises, setExercises, completions, setCompletions,
     goalSettings, setGoalSettings, exerciseGoals, setExerciseGoals,
     exerciseDescriptions, setExerciseDescriptions,
@@ -496,6 +497,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
                 <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Animations</Typography>
                 <ToggleButtonGroup color="primary" value={animationsEnabled ? 'on' : 'off'} exclusive onChange={(_e, val) => { if (val) setAnimationsEnabled(val === 'on'); }} size="small" aria-label="Animations">
+                  <ToggleButton value="on">On</ToggleButton>
+                  <ToggleButton value="off">Off</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
+                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Schedule Indicators on Log</Typography>
+                <ToggleButtonGroup color="primary" value={showScheduleInLog ? 'on' : 'off'} exclusive onChange={(_e, val) => { if (val) setShowScheduleInLog(val === 'on'); }} size="small" aria-label="Schedule indicators">
                   <ToggleButton value="on">On</ToggleButton>
                   <ToggleButton value="off">Off</ToggleButton>
                 </ToggleButtonGroup>

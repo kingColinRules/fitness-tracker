@@ -69,14 +69,14 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sparkData, color, plo
         {value}
       </Typography>
       <Tooltip title={sparkDescription ?? ''} placement="top" arrow>
-        <Box>
+        <Box sx={{ overflow: 'visible' }}>
           <SparkLineChart
             data={sparkData}
             height={50}
             width={120}
             color={color}
             plotType={plotType}
-            curve="natural"
+            curve="monotoneX"
             showTooltip
             showHighlight
             valueFormatter={sparkValueFormatter}
@@ -114,11 +114,10 @@ const StatsView: React.FC<StatsViewProps> = ({
   const weekActiveDays = weekDailyTotals.filter(n => n > 0).length;
   const weekSparkTotals = useMemo(
     () => weekDates.filter(d => localDateStr(d) <= todayStr).map(d => countDay(completions, exercises, formatDateKey(d))),
-    [weekDates, completions, exercises],
+    [weekDates, completions, exercises, todayStr],
   );
   const weekActiveSparkData = weekSparkTotals.map(n => (n > 0 ? 1 : 0));
   const weekCumulativeTotals = weekSparkTotals.reduce<number[]>((acc, v) => { acc.push((acc[acc.length - 1] ?? 0) + v); return acc; }, []);
-  const totalExercises = categories.reduce((sum, cat) => sum + exercises[cat].length, 0);
 
   // Monthly per-day totals
   const monthDailyTotals = useMemo(
@@ -129,7 +128,7 @@ const StatsView: React.FC<StatsViewProps> = ({
   const activeDays = monthDailyTotals.filter(n => n > 0).length;
   const monthSparkTotals = useMemo(
     () => dates.filter(d => localDateStr(d) <= todayStr).map(d => countDay(completions, exercises, formatDateKey(d))),
-    [dates, completions, exercises],
+    [dates, completions, exercises, todayStr],
   );
   const monthActiveSparkData = monthSparkTotals.map(n => (n > 0 ? 1 : 0));
   const monthCumulativeTotals = monthSparkTotals.reduce<number[]>((acc, v) => { acc.push((acc[acc.length - 1] ?? 0) + v); return acc; }, []);
@@ -157,22 +156,21 @@ const StatsView: React.FC<StatsViewProps> = ({
       else { current = 0; sparkData.push(0); }
     }
     return { bestStreak: best, streakSparkData: sparkData };
-  }, [periodDates, exercises, completions]);
+  }, [periodDates, exercises, completions, todayStr]);
   const mainXLabels = periodDates.map(d =>
     isWeekly ? DAY_NAMES[d.getDay()] : String(d.getDate()),
   );
   const mainSeries = useMemo(
     () =>
-      categories.map((cat, idx) => ({
+      categories.map((cat) => ({
         data: periodDates.map(d => {
           const dateStr = formatDateKey(d);
           return exercises[cat].filter(ex => completions[`${cat}-${ex}-${dateStr}`]).length;
         }),
         label: cat,
         stack: 'total',
-        color: theme.palette.chartColors[idx % theme.palette.chartColors.length],
       })),
-    [periodDates, categories, exercises, completions, theme.palette.chartColors],
+    [periodDates, categories, exercises, completions],
   );
 
   // Gauge — per-exercise, using override goal if set, else category default
@@ -246,20 +244,37 @@ const StatsView: React.FC<StatsViewProps> = ({
 
   const scoreSparkData = useMemo(() => {
     const dailyTotals = isWeekly ? weekSparkTotals : monthSparkTotals;
+
+    // Expected completions per day based on frequency goals (weeklyRequired / 7 per exercise)
+    let goalExpectedPerDay = 0;
+    if (goalsConfigured) {
+      Object.entries(goalSettings).forEach(([cat, goal]) => {
+        if (!goal.enabled || !exercises[cat]) return;
+        exercises[cat].forEach(ex => {
+          const eg = exerciseGoals[`${cat}-${ex}`];
+          if (eg?.disabled) return;
+          goalExpectedPerDay += (eg?.override ? eg.required : goal.required) / 7;
+        });
+      });
+    }
+
     let runningCompletions = 0;
     let runningActiveDays = 0;
     return dailyTotals.map((count, i) => {
       runningCompletions += count;
       if (count > 0) runningActiveDays++;
       const daysElapsed = i + 1;
-      const runningVolume = totalExercises > 0 ? (runningCompletions / (totalExercises * daysElapsed)) * 100 : 0;
       const runningConsistency = (runningActiveDays / daysElapsed) * 100;
       if (goalsConfigured) {
+        const goalExpectedSoFar = goalExpectedPerDay * daysElapsed;
+        const runningVolume = goalExpectedSoFar > 0
+          ? Math.min((runningCompletions / goalExpectedSoFar) * 100, 100)
+          : 0;
         return Math.round(gaugeValue * 0.5 + runningConsistency * 0.3 + runningVolume * 0.2);
       }
-      return Math.round(runningConsistency * 0.5 + runningVolume * 0.5);
+      return Math.round(runningConsistency);
     });
-  }, [isWeekly, weekSparkTotals, monthSparkTotals, totalExercises, gaugeValue, goalsConfigured]);
+  }, [isWeekly, weekSparkTotals, monthSparkTotals, goalSettings, exerciseGoals, exercises, gaugeValue, goalsConfigured]);
 
   const overallScore = scoreSparkData.at(-1) ?? 0;
 
@@ -269,12 +284,12 @@ const StatsView: React.FC<StatsViewProps> = ({
       {/* Stat cards */}
       <Box sx={{ display: 'flex', gap: 2 }}>
         <StatCard
-          label="Exercises Done"
+          label="Exercises Completed"
           value={isWeekly ? `${weekTotal}` : `${monthTotal}`}
           sparkData={isWeekly ? weekCumulativeTotals : monthCumulativeTotals}
           color={theme.palette.primary.main}
           sparkDescription="Cumulative exercises completed so far"
-          sparkValueFormatter={v => `${v ?? 0} exercise${v !== 1 ? 's' : ''} total`}
+          sparkValueFormatter={v => `${v ?? 0} exercise${v !== 1 ? 's' : ''} done`}
         />
         <StatCard
           label="Active Days"
@@ -298,7 +313,7 @@ const StatsView: React.FC<StatsViewProps> = ({
           value={`${overallScore}/100`}
           sparkData={scoreSparkData}
           color={theme.palette.info.main}
-          sparkDescription="Cumulative completion rate — running total of exercises done vs. total possible so far"
+          sparkDescription={goalsConfigured ? "Weighted score: 50% goals met + 30% consistency + 20% pace toward frequency goals" : "Consistency score: % of days with at least one exercise completed"}
           sparkValueFormatter={v => `${v ?? 0} / 100`}
         />
       </Box>
@@ -308,9 +323,10 @@ const StatsView: React.FC<StatsViewProps> = ({
         {/* Stacked bar chart */}
         <Box sx={{ flex: 3, borderRadius: 2, boxShadow: 2, p: 3, backgroundColor: 'background.paper', minWidth: 0 }}>
           <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500, mb: 1 }}>
-            By Day
+            Completed by Day
           </Typography>
           <BarChart
+            colors={theme.palette.chartColors}
             xAxis={[{ data: mainXLabels, scaleType: 'band' }]}
             yAxis={[{ tickMinStep: 1 }]}
             series={mainSeries}
@@ -384,9 +400,9 @@ const StatsView: React.FC<StatsViewProps> = ({
             </Tooltip>
           </Box>
 
-          {/* By Category for the current period */}
+          {/* Completed by Category for the current period */}
           <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper' }}>
-            <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500, mb: 1.5 }}>By Category</Typography>
+            <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500, mb: 1.5 }}>Completed by Category</Typography>
             {categories.length === 0 ? (
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>No exercises configured</Typography>
             ) : (
