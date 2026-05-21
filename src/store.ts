@@ -58,6 +58,7 @@ interface AppState {
 
   // App state
   hasUnsavedExport: boolean;
+  seenBadges: string[];
 
   // Setters
   setExercises: (v: Updater<Record<string, string[]>>) => void;
@@ -76,6 +77,7 @@ interface AppState {
   setUseCustomAppName: (v: boolean) => void;
   setAppName: (v: string) => void;
   setHasUnsavedExport: (v: boolean) => void;
+  setSeenBadges: (names: string[]) => void;
 
   // Actions
   toggleCompletion: (category: string, exercise: string, dateStr: string) => void;
@@ -109,6 +111,7 @@ export const useAppStore = create<AppState>()((set) => ({
   useCustomAppName: readSetting<boolean>('useCustomAppName', false),
   appName: readSetting<string>('appName', 'Fitness Tracker'),
   hasUnsavedExport: initHasUnsavedExport(),
+  seenBadges: readLS<string[]>('seenBadges') ?? [],
 
   setExercises: (v) => set(s => ({ exercises: applyUpdater(s.exercises, v) })),
   setCompletions: (v) => set(s => ({ completions: applyUpdater(s.completions, v) })),
@@ -126,6 +129,7 @@ export const useAppStore = create<AppState>()((set) => ({
   setUseCustomAppName: (v) => set({ useCustomAppName: v }),
   setAppName: (v) => set({ appName: v }),
   setHasUnsavedExport: (v) => set({ hasUnsavedExport: v }),
+  setSeenBadges: (names) => set({ seenBadges: names }),
 
   toggleCompletion: (category, exercise, dateStr) => {
     const key = `${category}-${exercise}-${dateStr}`;

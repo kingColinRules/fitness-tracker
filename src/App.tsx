@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import MuiBadge from '@mui/material/Badge';
 import SettingsIcon from '@mui/icons-material/SettingsOutlined';
 import EmojiEventsIcon from '@mui/icons-material/EmojiEventsOutlined';
 import SaveIcon from '@mui/icons-material/SaveOutlined';
@@ -33,6 +34,7 @@ import SettingsModal from './components/SettingsModal';
 import AddCategoryModal from './components/AddCategoryModal';
 import AddExerciseModal from './components/AddExerciseModal';
 import BadgesModal from './components/BadgesModal';
+import { useBadges } from './hooks/useBadges';
 
 const ExerciseTracker = () => {
   const {
@@ -40,7 +42,10 @@ const ExerciseTracker = () => {
     darkMode, compactView, chartMode, weekStartDay, defaultChartMode, animationsEnabled, showScheduleInLog, useCustomAppName, appName,
     hasUnsavedExport, setHasUnsavedExport, setChartMode,
     setExercises, setCompletions, setGoalSettings, setExerciseDescriptions,
+    seenBadges,
   } = useAppStore();
+
+  const { hasNewBadges } = useBadges();
 
   const [selectedMonth, setSelectedMonth] = useState(() => new Date().getMonth());
   const [selectedYear, setSelectedYear] = useState(() => new Date().getFullYear());
@@ -123,6 +128,11 @@ const ExerciseTracker = () => {
       localStorage.setItem('exerciseSettings', JSON.stringify({ darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled, showScheduleInLog, useCustomAppName, appName }));
     } catch (e) { console.error('Storage error:', e); }
   }, [darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled, showScheduleInLog, useCustomAppName, appName]);
+
+  useEffect(() => {
+    try { localStorage.setItem('seenBadges', JSON.stringify(seenBadges)); }
+    catch (e) { console.error('Storage error:', e); }
+  }, [seenBadges]);
 
   const scrollToTodayImmediate = () => {
     const todayStr = formatDateKey(new Date());
@@ -309,7 +319,11 @@ const ExerciseTracker = () => {
                     </IconButton>
                   </span>
                 </MuiTooltip>
-                <IconButton onClick={() => setShowBadges(true)} color="inherit"><EmojiEventsIcon sx={{ fontSize: 20 }} /></IconButton>
+                <IconButton onClick={() => setShowBadges(true)} color="inherit">
+                  <MuiBadge variant="dot" color="warning" invisible={!hasNewBadges}>
+                    <EmojiEventsIcon sx={{ fontSize: 20 }} />
+                  </MuiBadge>
+                </IconButton>
                 <IconButton onClick={() => setShowSettings(true)} color="inherit"><SettingsIcon sx={{ fontSize: 20 }} /></IconButton>
               </Box>
             </Box>
@@ -420,7 +434,6 @@ const ExerciseTracker = () => {
         <BadgesModal
           open={showBadges}
           onClose={() => setShowBadges(false)}
-          dates={dates}
         />
 
         <Snackbar
