@@ -14,6 +14,7 @@ declare module '@mui/material/styles' {
     labelXs: true;
     labelSm: true;
     labelLg: true;
+    iconSm: true;
     iconMd: true;
     iconLg: true;
   }
@@ -22,6 +23,7 @@ declare module '@mui/material/styles' {
     labelXs: React.CSSProperties;
     labelSm: React.CSSProperties;
     labelLg: React.CSSProperties;
+    iconSm: React.CSSProperties;
     iconMd: React.CSSProperties;
     iconLg: React.CSSProperties;
   }
@@ -30,6 +32,7 @@ declare module '@mui/material/styles' {
     labelXs?: React.CSSProperties;
     labelSm?: React.CSSProperties;
     labelLg?: React.CSSProperties;
+    iconSm?: React.CSSProperties;
     iconMd?: React.CSSProperties;
     iconLg?: React.CSSProperties;
   }
@@ -61,20 +64,22 @@ export const createAppTheme = (mode: 'light' | 'dark') =>
     },
     typography: {
       fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+      subtitle1: { fontWeight: 600, fontSize: '0.9375rem' },
       labelMicro: { fontSize: '0.625rem' },
       labelXs:    { fontSize: '0.65rem' },
       labelSm:    { fontSize: '0.7rem' },
       labelLg:    { fontSize: '0.8125rem' },
+      iconSm:     { fontSize: '1rem' },
       iconMd:     { fontSize: '1.25rem' },
-      iconLg:     { fontSize: '1.75rem' },
+      iconLg:     { fontSize: '1.5rem' },
     },
     components: {
       MuiAppBar: {
         styleOverrides: {
-          root: {
-            background: 'linear-gradient(135deg, #1e40af 0%, #3b82f6 100%)',
+          root: ({ theme }) => ({
+            background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
             color: '#ffffff',
-          },
+          }),
         },
       },
       MuiTable: {

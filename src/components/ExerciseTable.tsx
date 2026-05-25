@@ -75,7 +75,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
   const weekTint = (date: Date) => {
     if (chartMode !== 'monthly') return undefined;
     return (weekBandMap.get(formatDateKey(date)) ?? 0) % 2 === 1
-      ? alpha(theme.palette.text.primary, 0.06)
+      ? alpha(theme.palette.primary.main, isDark ? 0.1 : 0.07)
       : undefined;
   };
 
@@ -164,7 +164,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                                     backgroundColor: met ? 'success.main' : partial ? 'warning.main' : 'divider',
                                     opacity: allFuture ? 0.35 : 1,
                                   }} />
-                                  <Box sx={{ fontSize: '8px', color: 'text.disabled', lineHeight: 1, opacity: allFuture ? 0.35 : 1 }}>{wi + 1}</Box>
+                                  <Box sx={{ fontSize: theme.typography.labelMicro.fontSize, color: 'text.disabled', lineHeight: 1, opacity: allFuture ? 0.35 : 1 }}>{wi + 1}</Box>
                                 </Box>
                               );
                             })}
@@ -250,7 +250,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
       anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
       transformOrigin={{ vertical: 'top', horizontal: 'left' }}
     >
-      <Box sx={{ p: 2.5, width: 360 }}>
+      <Box sx={{ p: 2.5, width: 360, maxWidth: 'calc(100vw - 32px)' }}>
         <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>{popoverExercise?.name}</Typography>
         <TextField
           value={popoverDesc}

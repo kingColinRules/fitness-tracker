@@ -59,7 +59,7 @@ const ExerciseChip: React.FC<{
           </Box>
         }
         sx={{
-          fontSize: '0.7rem',
+          fontSize: theme.typography.labelSm.fontSize,
           height: 24,
           borderRadius: 1.5,
           cursor: 'grab',
@@ -196,9 +196,9 @@ const WeekColumn: React.FC<{
           size="small"
           disabled={available.length === 0}
           onClick={(e) => setPickerAnchor(e.currentTarget)}
-          sx={{ opacity: available.length === 0 ? 0.3 : 0.7, '&:hover': { opacity: 1 } }}
+          sx={{ opacity: available.length === 0 ? 0.3 : 0.7, '&:hover': { opacity: 1 }, transition: 'opacity 0.2s ease' }}
         >
-          <AddIcon sx={{ fontSize: 16 }} />
+          <AddIcon sx={{ fontSize: theme.typography.iconSm.fontSize }} />
         </IconButton>
       </Box>
 
@@ -447,7 +447,7 @@ const CalendarCell: React.FC<{
 
       <Box sx={{ flex: 1, px: 0.75, pt: 0.5, pb: 0.5, display: 'flex', flexDirection: 'column', gap: '2px' }}>
         {isRest ? (
-          <Typography sx={{ fontSize: '0.72rem', color: 'text.disabled', fontStyle: 'italic', mt: 0.5 }}>rest</Typography>
+          <Typography variant="labelSm" sx={{ color: 'text.disabled', fontStyle: 'italic', mt: 0.5 }}>rest</Typography>
         ) : (
           <>
             {visible.map((ex, i) => {
@@ -456,8 +456,8 @@ const CalendarCell: React.FC<{
               return (
                 <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: '3px', minWidth: 0 }}>
                   <Box sx={{ width: 3, height: 3, borderRadius: '50%', flexShrink: 0, backgroundColor: alpha(color, done ? 0.4 : 0.9) }} />
-                  <Typography sx={{
-                    fontSize: '0.72rem', lineHeight: 1.3,
+                  <Typography variant="labelSm" sx={{
+                    lineHeight: 1.3,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     color: done ? 'text.disabled' : 'text.primary',
                     textDecoration: done ? 'line-through' : 'none',
@@ -468,7 +468,7 @@ const CalendarCell: React.FC<{
               );
             })}
             {overflow > 0 && (
-              <Typography sx={{ fontSize: '0.68rem', color: 'text.disabled', lineHeight: 1.3 }}>+{overflow} more</Typography>
+              <Typography variant="labelXs" sx={{ color: 'text.disabled', lineHeight: 1.3 }}>+{overflow} more</Typography>
             )}
           </>
         )}
@@ -584,15 +584,15 @@ const ScheduleView: React.FC = () => {
     setWeeklySchedule(prev => ({ ...prev, [day]: sortByCategory([...(prev[day] ?? []), ...exs]) }));
 
   return (
-    <Box sx={{ pt: 2, pb: 4 }}>
-      <Box sx={{ mb: 2 }}>
-        <Typography variant="h6" sx={{ fontWeight: 700, lineHeight: 1.2 }}>
+    <Box sx={{ borderRadius: 2, boxShadow: 2, px: 3, pt: 2, pb: 3, backgroundColor: 'background.paper' }}>
+      <Box sx={{ mb: 1 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
           {isMonth ? 'Monthly Schedule' : 'Weekly Schedule'}
         </Typography>
         <Typography variant="labelSm" sx={{ color: 'text.secondary' }}>
           {isMonth
             ? 'How your weekly schedule maps across this month'
-            : 'Your repeating weekly plan — changes apply to every week'}
+            : 'Your repeating weekly plan'}
         </Typography>
       </Box>
 

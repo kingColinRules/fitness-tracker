@@ -55,21 +55,34 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sparkData, color, plo
     sx={{
       flex: 1,
       borderRadius: 2,
+      borderTop: `3px solid ${color}`,
       boxShadow: 2,
       p: 2,
       backgroundColor: 'background.paper',
       display: 'flex',
       flexDirection: 'column',
       gap: 0.5,
+      transition: 'box-shadow 0.15s ease',
+      '&:hover': { boxShadow: 4 },
     }}
   >
-    <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500 }}>
+    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
       {label}
     </Typography>
     <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 1 }}>
-      <Typography variant="h4" sx={{ fontWeight: 700, color: 'text.primary', whiteSpace: 'nowrap' }}>
-        {value}
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, whiteSpace: 'nowrap' }}>
+        {String(value).includes('/') ? (() => {
+          const [num, denom] = String(value).split('/').map(s => s.trim());
+          return (
+            <>
+              <Typography variant="h4" sx={{ fontWeight: 600, color: 'text.primary' }}>{num}</Typography>
+              <Typography sx={{ fontWeight: 500, color: 'text.secondary', fontSize: '1.1rem' }}>/ {denom}</Typography>
+            </>
+          );
+        })() : (
+          <Typography variant="h4" sx={{ fontWeight: 600, color: 'text.primary' }}>{value}</Typography>
+        )}
+      </Box>
       <Tooltip title={sparkDescription ?? ''} placement="top" arrow>
         <Box sx={{ overflow: 'visible' }}>
           <SparkLineChart
@@ -356,8 +369,8 @@ const StatsView: React.FC<StatsViewProps> = ({
       {/* Main chart + right column */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'stretch' }}>
         {/* Stacked bar chart */}
-        <Box sx={{ flex: 3, borderRadius: 2, boxShadow: 2, p: 3, backgroundColor: 'background.paper', minWidth: 0 }}>
-          <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500, mb: 1 }}>
+        <Box sx={{ flex: 3, borderRadius: 2, boxShadow: 2, p: 3, backgroundColor: 'background.paper', minWidth: 0, transition: 'box-shadow 0.15s ease', '&:hover': { boxShadow: 4 } }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
             Completed by Day
           </Typography>
           <BarChart
@@ -372,7 +385,7 @@ const StatsView: React.FC<StatsViewProps> = ({
             {categories.map((cat, idx) => (
               <Box key={cat} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <Box sx={{ width: 11, height: 11, borderRadius: '2px', backgroundColor: theme.palette.chartColors[idx % theme.palette.chartColors.length], flexShrink: 0 }} />
-                <Typography variant="body2" sx={{ color: 'text.primary' }}>{cat}</Typography>
+                <Typography variant="caption" sx={{ color: 'text.primary' }}>{cat}</Typography>
               </Box>
             ))}
           </Box>
@@ -383,8 +396,8 @@ const StatsView: React.FC<StatsViewProps> = ({
           {/* Goals + Exercises gauges side by side */}
           <Box sx={{ display: 'flex', gap: 2 }}>
             <Tooltip title="% of exercises that met their frequency goal this period" placement="bottom" arrow>
-            <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper', textAlign: 'center' }}>
-              <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5 }}>
+            <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper', textAlign: 'center', transition: 'box-shadow 0.15s ease', '&:hover': { boxShadow: 4 } }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
                 Goals Met
               </Typography>
               {goalsConfigured ? (
@@ -400,12 +413,12 @@ const StatsView: React.FC<StatsViewProps> = ({
                       [`& .${gaugeClasses.valueArc}`]: { fill: theme.palette.primary.main },
                     }}
                   />
-                  <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5 }}>
                     {gaugeNote}
                   </Typography>
                 </>
               ) : (
-                <Typography variant="body2" sx={{ color: 'text.secondary', py: 3 }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', py: 3 }}>
                   No Goals Configured
                 </Typography>
               )}
@@ -413,8 +426,8 @@ const StatsView: React.FC<StatsViewProps> = ({
             </Tooltip>
 
             <Tooltip title="How your completion rate compares to the time elapsed in the period — 100% means you're exactly on pace to hit your goals" placement="bottom" arrow>
-            <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper', textAlign: 'center' }}>
-              <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500, mb: 0.5 }}>
+            <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper', textAlign: 'center', transition: 'box-shadow 0.15s ease', '&:hover': { boxShadow: 4 } }}>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
                 Consistency
               </Typography>
               {goalsConfigured ? (
@@ -430,12 +443,12 @@ const StatsView: React.FC<StatsViewProps> = ({
                       [`& .${gaugeClasses.valueArc}`]: { fill: theme.palette.chartColors[1] },
                     }}
                   />
-                  <Typography variant="body2" sx={{ color: 'text.secondary', mt: 0.5 }}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5 }}>
                     {onTrackNote}
                   </Typography>
                 </>
               ) : (
-                <Typography variant="body2" sx={{ color: 'text.secondary', py: 3 }}>
+                <Typography variant="caption" sx={{ color: 'text.secondary', py: 3 }}>
                   No Goals Configured
                 </Typography>
               )}
@@ -444,12 +457,12 @@ const StatsView: React.FC<StatsViewProps> = ({
           </Box>
 
           {/* Completed by Category for the current period */}
-          <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper' }}>
+          <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper', transition: 'box-shadow 0.15s ease', '&:hover': { boxShadow: 4 } }}>
             <Tooltip title={goalsConfigured ? "Completions vs. goal target per category. The denominator is the sum of each exercise's weekly goal (multiplied by full weeks for monthly view). Categories without goals show total possible sessions." : "Completions vs. total possible sessions per category (exercises × days in period)"} placement="bottom" arrow>
-              <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500, mb: 1.5, display: 'inline-block' }}>Completed by Category</Typography>
+              <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5, display: 'inline-block' }}>Completed by Category</Typography>
             </Tooltip>
             {categories.length === 0 ? (
-              <Typography variant="body2" sx={{ color: 'text.secondary' }}>No exercises configured</Typography>
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>No exercises configured</Typography>
             ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
               {categories.map((cat, idx) => {
@@ -465,8 +478,8 @@ const StatsView: React.FC<StatsViewProps> = ({
                     <Tooltip key={cat} title={tooltipText} placement="top" arrow>
                     <Box>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                        <Typography variant="body2" sx={{ color: 'text.primary' }}>{cat}</Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>{completed}/{possible}</Typography>
+                        <Typography variant="caption" sx={{ color: 'text.primary' }}>{cat}</Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>{completed}/{possible}</Typography>
                       </Box>
                       <Box sx={{ height: 8, borderRadius: 4, backgroundColor: 'divider' }}>
                         <Box sx={{ height: '100%', borderRadius: 4, width: `${pct}%`, backgroundColor: color }} />
@@ -482,15 +495,15 @@ const StatsView: React.FC<StatsViewProps> = ({
       </Box>
 
       {/* Activity */}
-      <Box sx={{ borderRadius: 2, boxShadow: 2, p: 2.5, backgroundColor: 'background.paper' }}>
-        <Typography variant="subtitle1" sx={{ color: 'text.secondary', fontWeight: 500, mb: 1.5 }}>
+      <Box sx={{ borderRadius: 2, boxShadow: 2, p: 2.5, backgroundColor: 'background.paper', transition: 'box-shadow 0.15s ease', '&:hover': { boxShadow: 4 } }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5 }}>
           Activity
         </Typography>
 
         {/* Day of week headers */}
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', mb: '4px' }}>
           {Array.from({ length: 7 }, (_, i) => DAY_NAMES[(weekStartDay + i) % 7]).map(day => (
-            <Typography key={day} variant="caption" sx={{ textAlign: 'center', color: 'text.secondary', fontWeight: 500, fontSize: '0.65rem' }}>
+            <Typography key={day} sx={{ textAlign: 'center', color: 'text.secondary', fontWeight: 500, fontSize: theme.typography.labelXs.fontSize }}>
               {day}
             </Typography>
           ))}
@@ -533,9 +546,9 @@ const StatsView: React.FC<StatsViewProps> = ({
           <Typography variant="caption" sx={{ color: 'text.secondary', mr: 0.5 }}>Less</Typography>
           {[0, 0.25, 0.5, 0.75, 1].map(intensity => (
             <Box key={intensity} sx={{
-              width: 12,
-              height: 12,
-              borderRadius: 0.5,
+              width: 14,
+              height: 14,
+              borderRadius: '3px',
               backgroundColor: intensity === 0 ? 'action.hover' : alpha(theme.palette.primary.main, 0.15 + intensity * 0.85),
             }} />
           ))}

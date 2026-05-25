@@ -39,11 +39,11 @@ const BadgesModal: React.FC<BadgesModalProps> = ({ open, onClose }) => {
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2.5 }}>
           <Typography variant="h5" sx={{ fontWeight: 700 }}>Achievements</Typography>
-          <IconButton onClick={handleClose}><CloseIcon sx={{ fontSize: 24 }} /></IconButton>
+          <IconButton onClick={handleClose}><CloseIcon sx={{ fontSize: theme.typography.iconLg.fontSize }} /></IconButton>
         </Box>
 
         <Box sx={{
-          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1.5, mb: 3,
+          display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 1.5, mb: 3,
           p: 2, borderRadius: 1.5,
           backgroundColor: theme.palette.action.hover,
           border: `1px solid ${theme.palette.divider}`,
@@ -65,7 +65,7 @@ const BadgesModal: React.FC<BadgesModalProps> = ({ open, onClose }) => {
           {badgeGroups.map(group => (
             <Box key={group.title}>
               <Typography sx={{
-                fontWeight: 700, fontSize: '0.75rem', mb: 1.5,
+                fontWeight: 700, fontSize: theme.typography.caption.fontSize, mb: 1.5,
                 color: 'text.secondary', textTransform: 'uppercase', letterSpacing: '0.06em',
               }}>
                 {group.title}
@@ -99,7 +99,7 @@ const BadgesModal: React.FC<BadgesModalProps> = ({ open, onClose }) => {
                         </Box>
                         <Box sx={{ flex: 1, minWidth: 0 }}>
                           <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 0.5 }}>
-                            <Typography sx={{ fontWeight: 700, fontSize: '0.875rem', lineHeight: 1.2 }}>{badge.name}</Typography>
+                            <Typography sx={{ fontWeight: 700, fontSize: theme.typography.body2.fontSize, lineHeight: 1.2 }}>{badge.name}</Typography>
                             {badge.earned && (
                               <Box component="span" sx={{ color: goldColor, fontSize: '0.9rem', flexShrink: 0, fontWeight: 700 }}>✓</Box>
                             )}
