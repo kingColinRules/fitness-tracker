@@ -41,7 +41,9 @@ const ExerciseTracker = () => {
     exercises, completions, exerciseDescriptions, exerciseGoals, goalSettings, weeklySchedule,
     darkMode, compactView, chartMode, weekStartDay, defaultChartMode, animationsEnabled, showScheduleInLog, useCustomAppName, appName,
     hasUnsavedExport, setHasUnsavedExport, setChartMode,
-    setExercises, setCompletions, setGoalSettings, setExerciseDescriptions,
+    setExercises, setCompletions, setGoalSettings, setExerciseDescriptions, setExerciseGoals,
+    setDarkMode, setCompactView, setDefaultChartMode, setWeekStartDay, setAnimationsEnabled,
+    setShowScheduleInLog, setUseCustomAppName, setAppName, setSeenBadges,
     seenBadges,
   } = useAppStore();
 
@@ -196,7 +198,11 @@ const ExerciseTracker = () => {
 
   const writeJSON = async (handle: FileSystemFileHandle) => {
     const state = useAppStore.getState();
-    const json = generateExportJSON(state.exercises, state.completions, state.goalSettings, state.exerciseDescriptions, state.weeklySchedule);
+    const json = generateExportJSON(
+      state.exercises, state.completions, state.goalSettings, state.exerciseDescriptions, state.weeklySchedule,
+      state.exerciseGoals,
+      { darkMode: state.darkMode, compactView: state.compactView, defaultChartMode: state.defaultChartMode, weekStartDay: state.weekStartDay, animationsEnabled: state.animationsEnabled, showScheduleInLog: state.showScheduleInLog, useCustomAppName: state.useCustomAppName, appName: state.appName, seenBadges: state.seenBadges },
+    );
     const writable = await handle.createWritable();
     await writable.write(json);
     await writable.close();
@@ -206,7 +212,11 @@ const ExerciseTracker = () => {
 
   const exportToJSON = async () => {
     const state = useAppStore.getState();
-    const json = generateExportJSON(state.exercises, state.completions, state.goalSettings, state.exerciseDescriptions, state.weeklySchedule);
+    const json = generateExportJSON(
+      state.exercises, state.completions, state.goalSettings, state.exerciseDescriptions, state.weeklySchedule,
+      state.exerciseGoals,
+      { darkMode: state.darkMode, compactView: state.compactView, defaultChartMode: state.defaultChartMode, weekStartDay: state.weekStartDay, animationsEnabled: state.animationsEnabled, showScheduleInLog: state.showScheduleInLog, useCustomAppName: state.useCustomAppName, appName: state.appName, seenBadges: state.seenBadges },
+    );
     if (!('showSaveFilePicker' in window)) {
       const blob = new Blob([json], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
@@ -274,12 +284,37 @@ const ExerciseTracker = () => {
         goalSettings?: Record<string, { enabled: boolean; required: number }>;
         exerciseDescriptions?: Record<string, string>;
         weeklySchedule?: Record<string, { category: string; name: string }[]>;
+        exerciseGoals?: Record<string, { override: boolean; required: number; disabled?: boolean }>;
+        preferences?: {
+          darkMode?: boolean;
+          compactView?: boolean;
+          defaultChartMode?: 'weekly' | 'monthly';
+          weekStartDay?: number;
+          animationsEnabled?: boolean;
+          showScheduleInLog?: boolean;
+          useCustomAppName?: boolean;
+          appName?: string;
+          seenBadges?: string[];
+        };
       };
       setExercises(data.exercises);
       setCompletions(data.completions);
       if (data.goalSettings) setGoalSettings(data.goalSettings);
       if (data.exerciseDescriptions) setExerciseDescriptions(data.exerciseDescriptions);
       if (data.weeklySchedule) useAppStore.setState({ weeklySchedule: data.weeklySchedule });
+      if (data.exerciseGoals) setExerciseGoals(data.exerciseGoals);
+      if (data.preferences) {
+        const p = data.preferences;
+        if (p.darkMode !== undefined) setDarkMode(p.darkMode);
+        if (p.compactView !== undefined) setCompactView(p.compactView);
+        if (p.defaultChartMode !== undefined) setDefaultChartMode(p.defaultChartMode);
+        if (p.weekStartDay !== undefined) setWeekStartDay(p.weekStartDay);
+        if (p.animationsEnabled !== undefined) setAnimationsEnabled(p.animationsEnabled);
+        if (p.showScheduleInLog !== undefined) setShowScheduleInLog(p.showScheduleInLog);
+        if (p.useCustomAppName !== undefined) setUseCustomAppName(p.useCustomAppName);
+        if (p.appName !== undefined) setAppName(p.appName);
+        if (p.seenBadges !== undefined) setSeenBadges(p.seenBadges);
+      }
       setHasUnsavedExport(true);
       setImportFeedback({
         open: true,

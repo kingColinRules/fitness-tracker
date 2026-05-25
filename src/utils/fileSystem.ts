@@ -46,9 +46,21 @@ export function generateExportJSON(
   goalSettings: Record<string, { enabled: boolean; required: number }>,
   exerciseDescriptions: Record<string, string>,
   weeklySchedule: Record<string, { category: string; name: string }[]>,
+  exerciseGoals: Record<string, { override: boolean; required: number; disabled?: boolean }>,
+  preferences: {
+    darkMode: boolean;
+    compactView: boolean;
+    defaultChartMode: 'weekly' | 'monthly';
+    weekStartDay: number;
+    animationsEnabled: boolean;
+    showScheduleInLog: boolean;
+    useCustomAppName: boolean;
+    appName: string;
+    seenBadges: string[];
+  },
 ): string {
   return JSON.stringify(
-    { version: 1, exportedAt: new Date().toISOString(), exercises, goalSettings, completions, exerciseDescriptions, weeklySchedule },
+    { version: 1, exportedAt: new Date().toISOString(), exercises, goalSettings, exerciseGoals, completions, exerciseDescriptions, weeklySchedule, preferences },
     null,
     2,
   );
