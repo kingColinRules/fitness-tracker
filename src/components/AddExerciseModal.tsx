@@ -29,10 +29,10 @@ const AddExerciseModal: React.FC<AddExerciseModalProps> = ({ open, onClose, onAd
 
   return (
     <Modal open={open} onClose={onClose}>
-      <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', borderRadius: 2, boxShadow: 6, p: 3, maxWidth: 480, width: 'calc(100% - 32px)', backgroundColor: 'background.paper', color: 'text.primary' }}>
+      <Box sx={{ position: { xs: 'fixed', sm: 'absolute' }, top: { xs: 0, sm: '50%' }, left: { xs: 0, sm: '50%' }, transform: { xs: 'none', sm: 'translate(-50%, -50%)' }, borderRadius: { xs: 0, sm: 2 }, boxShadow: 6, p: 3, width: { xs: '100%', sm: 'calc(100% - 32px)' }, maxWidth: { xs: 'none', sm: 480 }, backgroundColor: 'background.paper', color: 'text.primary' }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 700 }}>Add Exercise</Typography>
-          <IconButton onClick={onClose}><CloseIcon sx={{ fontSize: 24 }} /></IconButton>
+          <IconButton onClick={onClose}><CloseIcon sx={(theme) => ({ fontSize: theme.typography.iconLg.fontSize })} /></IconButton>
         </Box>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Box>

@@ -79,7 +79,18 @@ export const createAppTheme = (mode: 'light' | 'dark') =>
           root: ({ theme }) => ({
             background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.primary.main} 100%)`,
             color: '#ffffff',
+            borderRadius: 0,
           }),
+        },
+      },
+      MuiPaper: {
+        defaultProps: {
+          elevation: 2,
+        },
+        styleOverrides: {
+          root: {
+            borderRadius: 8,
+          },
         },
       },
       MuiTable: {

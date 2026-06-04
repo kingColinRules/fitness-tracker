@@ -6,6 +6,7 @@ import Box from '@mui/material/Box';
 import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { formatDateKey, localDateStr, generateWeekDates, startOfWeek } from '../utils/dateUtils';
 import { useAppStore } from '../store';
 
@@ -53,7 +54,8 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sparkData, color, plo
   <Tooltip title={tooltip ?? ''} placement="bottom" arrow>
   <Box
     sx={{
-      flex: 1,
+      flex: { xs: '1 1 calc(50% - 8px)', md: 1 },
+      minWidth: 0,
       borderRadius: 2,
       borderTop: `3px solid ${color}`,
       boxShadow: 2,
@@ -83,7 +85,7 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sparkData, color, plo
           <Typography variant="h4" sx={{ fontWeight: 600, color: 'text.primary' }}>{value}</Typography>
         )}
       </Box>
-      <Tooltip title={sparkDescription ?? ''} placement="top" arrow>
+      {sparkData.length >= 2 ? (
         <Box sx={{ overflow: 'visible' }}>
           <SparkLineChart
             data={sparkData}
@@ -98,7 +100,9 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sparkData, color, plo
             margin={{ top: 8, bottom: 4, left: 4, right: 4 }}
           />
         </Box>
-      </Tooltip>
+      ) : (
+        <Box sx={{ width: 120, height: 50 }} />
+      )}
     </Box>
   </Box>
   </Tooltip>
@@ -114,6 +118,7 @@ const StatsView: React.FC<StatsViewProps> = ({
 }) => {
   const { exercises, completions, goalSettings, exerciseGoals, chartMode, weekStartDay } = useAppStore();
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const categories = Object.keys(exercises);
   const isWeekly = chartMode === 'weekly';
   const totalExercises = useMemo(() => Object.values(exercises).reduce((sum, exs) => sum + exs.length, 0), [exercises]);
@@ -281,8 +286,8 @@ const StatsView: React.FC<StatsViewProps> = ({
     const timeElapsedRatio = daysElapsed / periodLength;
     const total = isWeekly ? weekTotal : monthTotal;
     const expected = Math.round(totalGoalTarget * timeElapsedRatio);
-    const pace = Math.min(Math.round((total / (totalGoalTarget * timeElapsedRatio)) * 100), 100);
-    return { onTrackValue: pace, onTrackNote: `${total} done, ${expected} expected` };
+    const pace = expected === 0 ? 100 : Math.round((total / (totalGoalTarget * timeElapsedRatio)) * 100);
+    return { onTrackValue: pace, onTrackNote: `${total} exercise${total !== 1 ? 's' : ''} done, ${expected} expected` };
   }, [goalsConfigured, totalGoalTarget, daysElapsed, isWeekly, dates.length, weekTotal, monthTotal]);
 
 
@@ -308,15 +313,15 @@ const StatsView: React.FC<StatsViewProps> = ({
       runningCompletions += count;
       if (count > 0) runningActiveDays++;
       const daysElapsed = i + 1;
-      const runningConsistency = (runningActiveDays / daysElapsed) * 100;
+      const activeDaysPct = (runningActiveDays / daysElapsed) * 100;
       if (goalsConfigured) {
         const goalExpectedSoFar = goalExpectedPerDay * daysElapsed;
-        const runningVolume = goalExpectedSoFar > 0
+        const volumePct = goalExpectedSoFar > 0
           ? Math.min((runningCompletions / goalExpectedSoFar) * 100, 100)
           : 0;
-        return Math.round(gaugeValue * 0.5 + runningConsistency * 0.3 + runningVolume * 0.2);
+        return Math.round(gaugeValue * 0.5 + volumePct * 0.5);
       }
-      return Math.round(runningConsistency);
+      return Math.round(activeDaysPct);
     });
   }, [isWeekly, weekSparkTotals, monthSparkTotals, goalSettings, exerciseGoals, exercises, gaugeValue, goalsConfigured]);
 
@@ -326,9 +331,9 @@ const StatsView: React.FC<StatsViewProps> = ({
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       {/* Stat cards */}
-      <Box sx={{ display: 'flex', gap: 2 }}>
+      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <StatCard
-          label="Completed"
+          label="Exercises Completed"
           value={`${isWeekly ? weekTotal : monthTotal} / ${totalGoalTarget}`}
           sparkData={isWeekly ? weekCumulativeTotals : monthCumulativeTotals}
           color={theme.palette.primary.main}
@@ -360,14 +365,14 @@ const StatsView: React.FC<StatsViewProps> = ({
           value={`${overallScore} / 100`}
           sparkData={scoreSparkData}
           color={theme.palette.info.main}
-          tooltip={goalsConfigured ? "Weighted score: 50% goals met + 30% consistency + 20% pace toward frequency goals" : "Consistency score: percentage of days in the period with at least one exercise completed"}
-          sparkDescription={goalsConfigured ? "Weighted score: 50% goals met + 30% consistency + 20% pace toward frequency goals" : "Consistency score: % of days with at least one exercise completed"}
+          tooltip={goalsConfigured ? "Overall score: 50% goals met (exercises that hit their goal) + 50% volume (exercises done vs expected)" : "Score: percentage of days with at least one exercise completed"}
+          sparkDescription={goalsConfigured ? "Daily score: 50% goals met + 50% volume" : "% of days with at least one exercise completed"}
           sparkValueFormatter={v => `${v ?? 0} / 100`}
         />
       </Box>
 
       {/* Main chart + right column */}
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'stretch' }}>
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'stretch', flexDirection: { xs: 'column', md: 'row' } }}>
         {/* Stacked bar chart */}
         <Box sx={{ flex: 3, borderRadius: 2, boxShadow: 2, p: 3, backgroundColor: 'background.paper', minWidth: 0, transition: 'box-shadow 0.15s ease', '&:hover': { boxShadow: 4 } }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
@@ -378,7 +383,7 @@ const StatsView: React.FC<StatsViewProps> = ({
             xAxis={[{ data: mainXLabels, scaleType: 'band' }]}
             yAxis={[{ tickMinStep: 1 }]}
             series={mainSeries}
-            height={500}
+            height={isMobile ? 280 : 500}
             slots={{ legend: () => null }}
           />
           <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', columnGap: 2, rowGap: 0.5 }}>
@@ -395,7 +400,7 @@ const StatsView: React.FC<StatsViewProps> = ({
         <Box sx={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
           {/* Goals + Exercises gauges side by side */}
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <Tooltip title="% of exercises that met their frequency goal this period" placement="bottom" arrow>
+            <Tooltip title="How many of your exercises have hit their goal for this period. 100% means every exercise has met its goal." placement="bottom" arrow>
             <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper', textAlign: 'center', transition: 'box-shadow 0.15s ease', '&:hover': { boxShadow: 4 } }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
                 Goals Met
@@ -425,22 +430,23 @@ const StatsView: React.FC<StatsViewProps> = ({
             </Box>
             </Tooltip>
 
-            <Tooltip title="How your completion rate compares to the time elapsed in the period — 100% means you're exactly on pace to hit your goals" placement="bottom" arrow>
+            <Tooltip title="Are you on pace to hit your goals? 100% = on track, above = ahead, below = behind." placement="bottom" arrow>
             <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper', textAlign: 'center', transition: 'box-shadow 0.15s ease', '&:hover': { boxShadow: 4 } }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
-                Consistency
+                On Pace
               </Typography>
               {goalsConfigured ? (
                 <>
                   <Gauge
                     value={onTrackValue}
+                    valueMax={Math.max(100, onTrackValue)}
                     startAngle={-110}
                     endAngle={110}
                     height={120}
                     text={({ value }) => `${value}%`}
                     sx={{
                       [`& .${gaugeClasses.valueText}`]: { fontSize: theme.typography.h4.fontSize, fontWeight: 700 },
-                      [`& .${gaugeClasses.valueArc}`]: { fill: theme.palette.chartColors[1] },
+                      [`& .${gaugeClasses.valueArc}`]: { fill: onTrackValue > 100 ? theme.palette.success.main : theme.palette.chartColors[1] },
                     }}
                   />
                   <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5 }}>

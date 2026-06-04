@@ -30,11 +30,13 @@ const BadgesModal: React.FC<BadgesModalProps> = ({ open, onClose }) => {
   return (
     <Modal open={open} onClose={handleClose}>
       <Box sx={{
-        position: 'absolute', top: '50%', left: '50%',
-        transform: 'translate(-50%, -50%)',
-        borderRadius: 2, boxShadow: 6, p: 3,
-        maxWidth: 680, width: 'calc(100% - 32px)',
-        maxHeight: '90vh', overflowY: 'auto',
+        position: { xs: 'fixed', sm: 'absolute' },
+        top: { xs: 0, sm: '50%' }, left: { xs: 0, sm: '50%' },
+        transform: { xs: 'none', sm: 'translate(-50%, -50%)' },
+        borderRadius: { xs: 0, sm: 2 }, boxShadow: 6, p: 3,
+        width: { xs: '100%', sm: 'calc(100% - 32px)' }, maxWidth: { xs: 'none', sm: 680 },
+        height: { xs: '100%', sm: 'auto' }, maxHeight: { xs: 'none', sm: '90vh' },
+        overflowY: 'auto',
         backgroundColor: 'background.paper', color: 'text.primary',
       }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2.5 }}>

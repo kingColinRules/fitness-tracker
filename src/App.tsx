@@ -11,6 +11,7 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import MuiTooltip from '@mui/material/Tooltip';
+import Chip from '@mui/material/Chip';
 import Snackbar from '@mui/material/Snackbar';
 import Alert from '@mui/material/Alert';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -343,23 +344,26 @@ const ExerciseTracker = () => {
       <CssBaseline />
       <Box sx={{ width: '100%', minHeight: '100vh', overflow: 'auto', backgroundColor: 'background.default' }}>
         <AppBar position="static" elevation={2}>
-          <Toolbar disableGutters sx={{ px: 3 }}>
+          <Toolbar disableGutters sx={{ px: { xs: 1.5, md: 3 } }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', maxWidth: 1200, mx: 'auto' }}>
-              <Typography variant="h4" onClick={() => window.location.reload()} sx={{ fontWeight: 700, cursor: 'pointer' }}>{useCustomAppName ? appName : 'Fitness Tracker'}</Typography>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="h4" onClick={() => window.location.reload()} sx={{ fontWeight: 700, cursor: 'pointer', fontSize: { xs: '1.25rem', md: '2.125rem' } }}>{useCustomAppName ? appName : 'Fitness Tracker'}</Typography>
+                <Chip label="BETA" size="small" sx={{ fontSize: '0.6rem', fontWeight: 700, height: 18, letterSpacing: '0.05em', bgcolor: 'rgba(255,255,255,0.2)', color: 'inherit', border: '1px solid rgba(255,255,255,0.4)', '& .MuiChip-label': { px: '6px' } }} />
+              </Box>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 <MuiTooltip title={hasUnsavedExport ? 'Click to export' : 'All saved'}>
                   <span>
                     <IconButton onClick={hasUnsavedExport ? saveToFile : undefined} disabled={!hasUnsavedExport} color="inherit">
-                      <SaveIcon sx={{ fontSize: 20 }} />
+                      <SaveIcon sx={{ fontSize: { xs: 22, md: 20 } }} />
                     </IconButton>
                   </span>
                 </MuiTooltip>
                 <IconButton onClick={() => setShowBadges(true)} color="inherit">
                   <MuiBadge variant="dot" color="warning" invisible={!hasNewBadges}>
-                    <EmojiEventsIcon sx={{ fontSize: 20 }} />
+                    <EmojiEventsIcon sx={{ fontSize: { xs: 22, md: 20 } }} />
                   </MuiBadge>
                 </IconButton>
-                <IconButton onClick={() => setShowSettings(true)} color="inherit"><SettingsIcon sx={{ fontSize: 20 }} /></IconButton>
+                <IconButton onClick={() => setShowSettings(true)} color="inherit"><SettingsIcon sx={{ fontSize: { xs: 22, md: 20 } }} /></IconButton>
               </Box>
             </Box>
           </Toolbar>
@@ -367,7 +371,7 @@ const ExerciseTracker = () => {
 
         <Box sx={{ p: 3 }}>
           <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2, mb: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'flex-start', sm: 'space-between' }, gap: 2, mb: 2, flexWrap: 'wrap', rowGap: 1 }}>
               <Box>
                 <ToggleButtonGroup color="primary" value={activeView} exclusive onChange={(_e, val) => { if (val) setActiveView(val); }} size="small" aria-label="View">
                   <ToggleButton value="table">Log</ToggleButton>
@@ -438,7 +442,7 @@ const ExerciseTracker = () => {
               />
             )}
 
-            {activeView === 'schedule' && <ScheduleView />}
+            {activeView === 'schedule' && <ScheduleView selectedMonth={selectedMonth} selectedYear={selectedYear} />}
           </Box>
         </Box>
 

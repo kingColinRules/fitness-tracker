@@ -414,8 +414,8 @@ const CalendarCell: React.FC<{
         const color = categoryColors[ex.category] ?? '#888';
         return (
           <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <Box sx={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, backgroundColor: color, opacity: done ? 0.4 : 1 }} />
-            <span style={{ textDecoration: done ? 'line-through' : 'none', opacity: done ? 0.6 : 1 }}>{ex.name}</span>
+            <Box sx={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, backgroundColor: color }} />
+            <span style={{ textDecoration: done ? 'line-through' : 'none' }}>{ex.name}</span>
           </Box>
         );
       })}
@@ -428,14 +428,17 @@ const CalendarCell: React.FC<{
       flex: 1, minWidth: 0,
       border: isTodayCell ? `2px solid ${theme.palette.primary.main}` : `1px solid ${theme.palette.divider}`,
       borderRadius: 1.5,
-      backgroundColor: isTodayCell ? alpha(theme.palette.primary.main, isDark ? 0.1 : 0.05) : 'background.paper',
+      backgroundColor: 'background.paper',
       display: 'flex', flexDirection: 'column',
       overflow: 'hidden',
-      opacity: isFuture ? 0.55 : 1,
-      minHeight: 110,
+      minHeight: { xs: 64, sm: 110 },
     }}>
-      <Box sx={{ px: 0.75, pt: 0.5, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-        <Typography variant="labelSm" sx={{ fontWeight: isTodayCell ? 800 : 500, color: isTodayCell ? 'primary.main' : 'text.primary', lineHeight: 1 }}>
+      <Box sx={{
+        px: 1, py: 0.5,
+        backgroundColor: isTodayCell ? alpha(theme.palette.primary.main, 0.12) : alpha(theme.palette.divider, 0.4),
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <Typography variant="labelLg" sx={{ fontWeight: 700, color: isTodayCell ? 'primary.main' : 'text.secondary', letterSpacing: 0.5 }}>
           {date.getDate()}
         </Typography>
         {isPast && !isRest && total > 0 && (
@@ -445,21 +448,25 @@ const CalendarCell: React.FC<{
         )}
       </Box>
 
-      <Box sx={{ flex: 1, px: 0.75, pt: 0.5, pb: 0.5, display: 'flex', flexDirection: 'column', gap: '2px' }}>
+      <Divider />
+
+      <Box sx={{ flex: 1, px: 0.75, pt: 0.5, pb: 0.5, display: 'flex', flexDirection: 'column', gap: '4px' }}>
         {isRest ? (
-          <Typography variant="labelSm" sx={{ color: 'text.disabled', fontStyle: 'italic', mt: 0.5 }}>rest</Typography>
+          <Box sx={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 40 }}>
+            <Typography variant="labelSm" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>Rest day</Typography>
+          </Box>
         ) : (
           <>
             {visible.map((ex, i) => {
               const done = exDone(ex);
               const color = categoryColors[ex.category] ?? theme.palette.text.secondary;
               return (
-                <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: '3px', minWidth: 0 }}>
-                  <Box sx={{ width: 3, height: 3, borderRadius: '50%', flexShrink: 0, backgroundColor: alpha(color, done ? 0.4 : 0.9) }} />
+                <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
+                  <Box sx={{ width: 4, height: 4, borderRadius: '50%', flexShrink: 0, backgroundColor: alpha(color, 0.9) }} />
                   <Typography variant="labelSm" sx={{
                     lineHeight: 1.3,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                    color: done ? 'text.disabled' : 'text.primary',
+                    color: 'text.primary',
                     textDecoration: done ? 'line-through' : 'none',
                   }}>
                     {ex.name}
@@ -468,7 +475,7 @@ const CalendarCell: React.FC<{
               );
             })}
             {overflow > 0 && (
-              <Typography variant="labelXs" sx={{ color: 'text.disabled', lineHeight: 1.3 }}>+{overflow} more</Typography>
+              <Typography variant="labelXs" sx={{ color: 'text.secondary', lineHeight: 1.3 }}>+{overflow} more</Typography>
             )}
           </>
         )}
@@ -489,10 +496,10 @@ const MonthView: React.FC<{
   completions: Record<string, boolean>;
   categoryColors: Record<string, string>;
   allExercises: Record<string, string[]>;
-}> = ({ weeklySchedule, completions, categoryColors, allExercises }) => {
+  year: number;
+  month: number;
+}> = ({ weeklySchedule, completions, categoryColors, allExercises, year, month }) => {
   const theme = useTheme();
-  const year = TODAY.getFullYear();
-  const month = TODAY.getMonth();
   const weeks = buildCalendarGrid(year, month);
 
   return (
@@ -531,7 +538,7 @@ const MonthView: React.FC<{
 
 // ─── Root ──────────────────────────────────────────────────────────────────
 
-const ScheduleView: React.FC = () => {
+const ScheduleView: React.FC<{ selectedMonth: number; selectedYear: number }> = ({ selectedMonth, selectedYear }) => {
   const { chartMode, weeklySchedule, setWeeklySchedule, exercises, completions, goalSettings, exerciseGoals } = useAppStore();
   const theme = useTheme();
   const isMonth = chartMode === 'monthly';
@@ -543,22 +550,20 @@ const ScheduleView: React.FC = () => {
     [exercises, theme.palette.chartColors],
   );
 
-  const scheduledNames = useMemo(() => {
-    const set = new Set<string>();
-    Object.values(weeklySchedule).flat().forEach(e => set.add(`${e.category}-${e.name}`));
-    return set;
-  }, [weeklySchedule]);
-
   const scheduleProgress = useMemo(
     () => Object.fromEntries(
       Object.entries(exercises).map(([cat, names]) => {
         if (!goalSettings[cat]?.enabled) return [cat, null];
-        const goalNames = names.filter(name => !exerciseGoals[`${cat}-${name}`]?.disabled);
-        const scheduled = goalNames.filter(name => scheduledNames.has(`${cat}-${name}`)).length;
-        return [cat, { scheduled, total: goalNames.length }];
+        const sessions = Object.values(weeklySchedule).flat().filter(e => e.category === cat).length;
+        const goal = names.reduce((sum, name) => {
+          const eg = exerciseGoals[`${cat}-${name}`];
+          if (eg?.disabled) return sum;
+          return sum + (eg?.override ? eg.required : goalSettings[cat].required);
+        }, 0);
+        return [cat, { sessions, goal }];
       })
     ),
-    [exercises, scheduledNames, goalSettings, exerciseGoals],
+    [exercises, weeklySchedule, goalSettings, exerciseGoals],
   );
 
   const handleRemove = (day: string, idx: number) =>
@@ -597,7 +602,7 @@ const ScheduleView: React.FC = () => {
       </Box>
 
       {isMonth
-        ? <MonthView weeklySchedule={weeklySchedule} completions={completions} categoryColors={categoryColors} allExercises={exercises} />
+        ? <MonthView weeklySchedule={weeklySchedule} completions={completions} categoryColors={categoryColors} allExercises={exercises} year={selectedYear} month={selectedMonth} />
         : <WeekView weeklySchedule={weeklySchedule} allExercises={exercises} categoryColors={categoryColors} onRemove={handleRemove} onAdd={handleAdd} setWeeklySchedule={setWeeklySchedule} />}
 
       <Box sx={{ display: 'flex', gap: 2, mt: 2, flexWrap: 'wrap' }}>
@@ -608,8 +613,8 @@ const ScheduleView: React.FC = () => {
               <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: categoryColors[cat] }} />
               <Typography variant="labelSm" sx={{ color: 'text.secondary' }}>{cat}</Typography>
               {progress && (
-                <Typography variant="labelXs" sx={{ color: progress.scheduled < progress.total ? 'warning.main' : 'text.disabled' }}>
-                  ({progress.scheduled}/{progress.total} Scheduled)
+                <Typography variant="labelXs" sx={{ color: progress.sessions < progress.goal ? 'warning.main' : 'success.main' }}>
+                  ({progress.sessions}/{progress.goal} scheduled)
                 </Typography>
               )}
             </Box>

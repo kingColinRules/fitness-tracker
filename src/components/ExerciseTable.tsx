@@ -62,22 +62,6 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
   const categoryBg = isDark ? theme.palette.background.default : alpha(theme.palette.primary.light, 0.13);
   const rowBg = theme.palette.background.paper;
 
-  const weekBandMap = useMemo(() => {
-    const map = new Map<string, number>();
-    let band = 0;
-    tableDates.forEach((d, i) => {
-      if (i > 0 && d.getDay() === weekStartDay) band++;
-      map.set(formatDateKey(d), band);
-    });
-    return map;
-  }, [tableDates, weekStartDay]);
-
-  const weekTint = (date: Date) => {
-    if (chartMode !== 'monthly') return undefined;
-    return (weekBandMap.get(formatDateKey(date)) ?? 0) % 2 === 1
-      ? alpha(theme.palette.primary.main, isDark ? 0.1 : 0.07)
-      : undefined;
-  };
 
   const isCompleted = (category: string, exercise: string, dateStr: string): boolean =>
     isCompletedUtil(completions, category, exercise, dateStr);
@@ -104,14 +88,14 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
 
   return (
     <>
-    <TableContainer ref={tableWrapperRef} component={Paper} sx={{ borderRadius: 2, boxShadow: 2 }}>
+    <TableContainer ref={tableWrapperRef} component={Paper}>
       <Table sx={{ width: '100%' }} size={compactView ? 'small' : 'medium'}>
         <TableHead>
           <TableRow sx={{ backgroundColor: headerBg }}>
             <TableCell ref={exerciseHeaderRef} sx={{ position: 'sticky', left: 0, zIndex: 70, minWidth: chartMode === 'weekly' ? 160 : 100, backgroundColor: headerBg, color: 'text.primary' }}>Exercise</TableCell>
             <TableCell sx={{ position: 'sticky', left: `${exerciseColumnWidth}px`, zIndex: 60, textAlign: 'center', minWidth: 44, backgroundColor: headerBg, color: 'text.primary' }}>{chartMode === 'monthly' ? 'Wk Goals' : 'Goal'}</TableCell>
             {tableDates.map(date => (
-              <TableCell key={date.toISOString()} data-date={formatDateKey(date)} align="center" sx={{ minWidth: chartMode === 'weekly' ? 80 : 24, borderColor: 'divider', backgroundColor: weekTint(date), borderBottom: isToday(date) ? `3px solid ${theme.palette.primary.main}` : undefined, color: 'text.primary', lineHeight: 1.2, px: 0.25 }}>
+              <TableCell key={date.toISOString()} data-date={formatDateKey(date)} align="center" sx={{ minWidth: chartMode === 'weekly' ? 80 : 24, borderColor: 'divider', borderBottom: isToday(date) ? `2px solid ${theme.palette.primary.main}` : undefined, color: 'text.primary', lineHeight: 1.2, px: 0.25 }}>
                 <Box sx={{ fontSize: theme.typography.labelXs.fontSize, opacity: 0.7 }}>{dayjs(date).format('ddd')}</Box>
                 <Box sx={{ fontSize: theme.typography.caption.fontSize }}>{chartMode === 'weekly' ? dayjs(date).format('DD MMM') : String(date.getDate()).padStart(2, '0')}</Box>
               </TableCell>
@@ -122,7 +106,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
           {Object.entries(exercises).map(([category, exerciseList]) => (
             <React.Fragment key={category}>
               <TableRow sx={{ backgroundColor: categoryBg }}>
-                <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', position: 'sticky', left: 0, zIndex: 80, backgroundColor: categoryBg, color: isDark ? theme.palette.primary.light : 'text.primary' }}>{category}</TableCell>
+                <TableCell sx={{ fontWeight: 700, textTransform: 'uppercase', position: 'sticky', left: 0, zIndex: 80, backgroundColor: categoryBg, color: isDark ? theme.palette.primary.light : 'text.primary', py: 1.25 }}>{category}</TableCell>
                 <TableCell colSpan={tableDates.length + 1} sx={{ backgroundColor: categoryBg }} />
               </TableRow>
               {exerciseList.map((exercise) => {
@@ -161,7 +145,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                                 >
                                   <Box sx={{
                                     width: 7, height: 7, borderRadius: '50%',
-                                    backgroundColor: met ? 'success.main' : partial ? 'warning.main' : 'divider',
+                                    backgroundColor: met ? 'success.main' : 'divider',
                                     opacity: allFuture ? 0.35 : 1,
                                   }} />
                                   <Box sx={{ fontSize: theme.typography.labelMicro.fontSize, color: 'text.disabled', lineHeight: 1, opacity: allFuture ? 0.35 : 1 }}>{wi + 1}</Box>
@@ -186,7 +170,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                       const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()];
                       const scheduled = (weeklySchedule[dayName] ?? []).some(e => e.category === category && e.name === exercise);
                       return (
-                        <TableCell key={date.toISOString()} data-date-cell align="center" sx={{ borderColor: 'divider', backgroundColor: weekTint(date), px: chartMode === 'monthly' ? 0.25 : 0.5, py: 0.5 }}>
+                        <TableCell key={date.toISOString()} data-date-cell align="center" sx={{ borderColor: 'divider', px: chartMode === 'monthly' ? 0.25 : 0.5, py: 0.5 }}>
                           <Tooltip title={scheduled && !completed && !isFuture && showScheduleInLog ? 'Scheduled for today' : ''} placement="top" arrow>
                           <Button
                             onClick={(e) => {
@@ -212,7 +196,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                             size={compactView ? 'small' : 'medium'}
                             sx={{
                               borderRadius: 1,
-                              height: compactView ? 32 : 44,
+                              height: 44,
                               minWidth: 0,
                               p: 0,
                               overflow: 'hidden',
@@ -250,7 +234,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
       anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
       transformOrigin={{ vertical: 'top', horizontal: 'left' }}
     >
-      <Box sx={{ p: 2.5, width: 360, maxWidth: 'calc(100vw - 32px)' }}>
+      <Box sx={{ p: 2.5, width: { xs: 'calc(100vw - 32px)', sm: 360 }, maxWidth: 'calc(100vw - 32px)' }}>
         <Typography variant="subtitle2" sx={{ mb: 1.5, fontWeight: 600 }}>{popoverExercise?.name}</Typography>
         <TextField
           value={popoverDesc}

@@ -295,10 +295,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   return (
     <>
     <Modal open={open} onClose={onClose}>
-      <Box sx={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', borderRadius: 2, boxShadow: 6, width: 'calc(100% - 32px)', maxWidth: 960, display: 'flex', flexDirection: 'column', backgroundColor: 'background.paper', color: 'text.primary', height: '90vh' }}>
+      <Box sx={{ position: { xs: 'fixed', sm: 'absolute' }, top: { xs: 0, sm: '50%' }, left: { xs: 0, sm: '50%' }, transform: { xs: 'none', sm: 'translate(-50%, -50%)' }, borderRadius: { xs: 0, sm: 2 }, boxShadow: 6, width: { xs: '100%', sm: 'calc(100% - 32px)' }, maxWidth: { xs: 'none', sm: 960 }, display: 'flex', flexDirection: 'column', backgroundColor: 'background.paper', color: 'text.primary', height: { xs: '100%', sm: '90vh' } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', p: 3, pb: 0, flexShrink: 0 }}>
           <Typography variant="h5" sx={{ fontWeight: 700 }}>Settings</Typography>
-          <IconButton onClick={onClose} sx={{ p: 1 }}><CloseIcon sx={{ fontSize: 24 }} /></IconButton>
+          <IconButton onClick={onClose} sx={{ p: 1 }}><CloseIcon sx={(theme) => ({ fontSize: theme.typography.iconLg.fontSize })} /></IconButton>
         </Box>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
           <Tabs value={activeTab} onChange={(_e, val) => setActiveTab(val)} sx={{ px: 3 }}>
