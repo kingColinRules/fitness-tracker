@@ -294,15 +294,14 @@ const StatsView: React.FC<StatsViewProps> = ({
   const scoreSparkData = useMemo(() => {
     const dailyTotals = isWeekly ? weekSparkTotals : monthSparkTotals;
 
-    // Expected completions per day based on frequency goals (weeklyRequired / 7 per exercise)
-    let goalExpectedPerDay = 0;
+    let totalGoal = 0;
     if (goalsConfigured) {
       Object.entries(goalSettings).forEach(([cat, goal]) => {
         if (!goal.enabled || !exercises[cat]) return;
         exercises[cat].forEach(ex => {
           const eg = exerciseGoals[`${cat}-${ex}`];
           if (eg?.disabled) return;
-          goalExpectedPerDay += (eg?.override ? eg.required : goal.required) / 7;
+          totalGoal += eg?.override ? eg.required : goal.required;
         });
       });
     }
@@ -315,9 +314,8 @@ const StatsView: React.FC<StatsViewProps> = ({
       const daysElapsed = i + 1;
       const activeDaysPct = (runningActiveDays / daysElapsed) * 100;
       if (goalsConfigured) {
-        const goalExpectedSoFar = goalExpectedPerDay * daysElapsed;
-        const volumePct = goalExpectedSoFar > 0
-          ? Math.min((runningCompletions / goalExpectedSoFar) * 100, 100)
+        const volumePct = totalGoal > 0
+          ? Math.min((runningCompletions / totalGoal) * 100, 100)
           : 0;
         return Math.round(gaugeValue * 0.5 + volumePct * 0.5);
       }
