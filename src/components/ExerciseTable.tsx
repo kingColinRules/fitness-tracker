@@ -95,7 +95,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
             <TableCell ref={exerciseHeaderRef} sx={{ position: 'sticky', left: 0, zIndex: 70, minWidth: chartMode === 'weekly' ? 160 : 100, backgroundColor: headerBg, color: 'text.primary' }}>Exercise</TableCell>
             <TableCell sx={{ position: 'sticky', left: `${exerciseColumnWidth}px`, zIndex: 60, textAlign: 'center', minWidth: 44, backgroundColor: headerBg, color: 'text.primary' }}>{chartMode === 'monthly' ? 'Wk Goals' : 'Goal'}</TableCell>
             {tableDates.map(date => (
-              <TableCell key={date.toISOString()} data-date={formatDateKey(date)} align="center" sx={{ minWidth: chartMode === 'weekly' ? 80 : 24, borderColor: 'divider', borderBottom: isToday(date) ? `2px solid ${theme.palette.primary.main}` : undefined, color: 'text.primary', lineHeight: 1.2, px: 0.25 }}>
+              <TableCell key={date.toISOString()} data-date={formatDateKey(date)} align="center" sx={{ minWidth: chartMode === 'weekly' ? 80 : 24, borderColor: 'divider', borderBottom: isToday(date) ? `2px solid ${theme.palette.primary.main}` : undefined, color: 'text.primary', lineHeight: 1.2, px: 0.25, ...(chartMode === 'monthly' && date.getDay() === weekStartDay && { borderLeft: `2px solid ${theme.palette.divider}`, pl: 1 }), ...(chartMode === 'monthly' && date.getDay() === (weekStartDay + 6) % 7 && { pr: 1 }) }}>
                 <Box sx={{ fontSize: theme.typography.labelXs.fontSize, opacity: 0.7 }}>{dayjs(date).format('ddd')}</Box>
                 <Box sx={{ fontSize: theme.typography.caption.fontSize }}>{chartMode === 'weekly' ? dayjs(date).format('DD MMM') : String(date.getDate()).padStart(2, '0')}</Box>
               </TableCell>
@@ -170,7 +170,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                       const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()];
                       const scheduled = (weeklySchedule[dayName] ?? []).some(e => e.category === category && e.name === exercise);
                       return (
-                        <TableCell key={date.toISOString()} data-date-cell align="center" sx={{ borderColor: 'divider', px: chartMode === 'monthly' ? 0.25 : 0.5, py: 0.5 }}>
+                        <TableCell key={date.toISOString()} data-date-cell align="center" sx={{ borderColor: 'divider', px: chartMode === 'monthly' ? 0.25 : 0.5, py: 0.5, ...(chartMode === 'monthly' && date.getDay() === weekStartDay && { borderLeft: `2px solid ${theme.palette.divider}`, pl: 1 }), ...(chartMode === 'monthly' && date.getDay() === (weekStartDay + 6) % 7 && { pr: 1 }) }}>
                           <Tooltip title={scheduled && !completed && !isFuture && showScheduleInLog ? 'Scheduled for today' : ''} placement="top" arrow>
                           <Button
                             onClick={(e) => {

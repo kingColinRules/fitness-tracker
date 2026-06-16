@@ -25,8 +25,8 @@ function readSetting<T>(key: string, fallback: T): T {
   return fallback;
 }
 
-export type ExerciseGoals = Record<string, { override: boolean; required: number; disabled?: boolean }>;
-export type GoalSettings = Record<string, { enabled: boolean; required: number }>;
+export type ExerciseGoals = Record<string, { override: boolean; required: number; disabled?: boolean; createdAt?: string }>;
+export type GoalSettings = Record<string, { enabled: boolean; required: number; createdAt?: string }>;
 export type WeeklyScheduleEntry = { category: string; name: string };
 export type WeeklySchedule = Record<string, WeeklyScheduleEntry[]>;
 

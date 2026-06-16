@@ -146,10 +146,19 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         setExerciseGoals(newExerciseGoals);
       }
     }
-    setGoalSettings(prev => ({
-      ...prev,
-      [newKey ?? editingCategory!]: { enabled: editCategoryGoalEnabled, required: editCategoryGoalRequired },
-    }));
+    setGoalSettings(prev => {
+      const key = newKey ?? editingCategory!;
+      const existing = prev[key];
+      const today = new Date().toISOString().split('T')[0];
+      return {
+        ...prev,
+        [key]: {
+          enabled: editCategoryGoalEnabled,
+          required: editCategoryGoalRequired,
+          createdAt: existing?.createdAt ?? (editCategoryGoalEnabled ? today : undefined),
+        },
+      };
+    });
     setEditingCategory(null);
     setEditCategoryName('');
   };
@@ -222,9 +231,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     const newKey = `${editingExercise!.category}-${editExerciseName.trim() || editingExercise!.name}`;
     setExerciseGoals(prev => {
       const next = { ...prev };
+      const today = new Date().toISOString().split('T')[0];
       if (oldKey !== newKey) delete next[oldKey];
       if (editExerciseNoGoal) next[newKey] = { override: true, required: editExerciseOverrideRequired, disabled: true };
-      else if (editExerciseOverride) next[newKey] = { override: true, required: editExerciseOverrideRequired };
+      else if (editExerciseOverride) next[newKey] = { override: true, required: editExerciseOverrideRequired, createdAt: next[newKey]?.createdAt ?? today };
       else delete next[newKey];
       return next;
     });
