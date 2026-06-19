@@ -71,6 +71,21 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
       !isFutureDate(date) && isCompleted(category, exercise, formatDateKey(date))
     ).length;
 
+  // For confetti: always count within the current ISO week, not the full month range.
+  const calculateCurrentWeekCount = (category: string, exercise: string): number => {
+    if (chartMode !== 'monthly') return calculateWeeklyCount(category, exercise);
+    const today = new Date();
+    const startOffset = (today.getDay() - weekStartDay + 7) % 7;
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - startOffset);
+    weekStart.setHours(0, 0, 0, 0);
+    return tableDates.filter(date => {
+      const d = new Date(date);
+      d.setHours(0, 0, 0, 0);
+      return d >= weekStart && !isFutureDate(date) && isCompleted(category, exercise, formatDateKey(date));
+    }).length;
+  };
+
   const monthlyWeekGroups = useMemo(() => {
     if (chartMode !== 'monthly') return [];
     const groups: Date[][] = [];
@@ -111,6 +126,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
               </TableRow>
               {exerciseList.map((exercise) => {
                 const weeklyCount = calculateWeeklyCount(category, exercise);
+                const currentWeekCount = calculateCurrentWeekCount(category, exercise);
                 const eg = exerciseGoals[`${category}-${exercise}`];
                 const showProgress = goalSettings[category]?.enabled && !eg?.disabled;
                 const weeklyRequired = (eg?.override && !eg?.disabled) ? eg.required : (goalSettings[category]?.required || 3);
@@ -145,7 +161,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                                 >
                                   <Box sx={{
                                     width: 7, height: 7, borderRadius: '50%',
-                                    backgroundColor: met ? 'success.main' : 'divider',
+                                    backgroundColor: met ? 'success.main' : partial ? 'warning.main' : 'divider',
                                     opacity: allFuture ? 0.35 : 1,
                                   }} />
                                   <Box sx={{ fontSize: theme.typography.labelMicro.fontSize, color: 'text.disabled', lineHeight: 1, opacity: allFuture ? 0.35 : 1 }}>{wi + 1}</Box>
@@ -171,11 +187,11 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                       const scheduled = (weeklySchedule[dayName] ?? []).some(e => e.category === category && e.name === exercise);
                       return (
                         <TableCell key={date.toISOString()} data-date-cell align="center" sx={{ borderColor: 'divider', px: chartMode === 'monthly' ? 0.25 : 0.5, py: 0.5, ...(chartMode === 'monthly' && date.getDay() === weekStartDay && { borderLeft: `2px solid ${theme.palette.divider}`, pl: 1 }), ...(chartMode === 'monthly' && date.getDay() === (weekStartDay + 6) % 7 && { pr: 1 }) }}>
-                          <Tooltip title={scheduled && !completed && !isFuture && showScheduleInLog ? 'Scheduled for today' : ''} placement="top" arrow>
+                          <Tooltip title={scheduled && !completed && !isFuture && showScheduleInLog ? (isToday(date) ? 'Scheduled for today' : 'Scheduled') : ''} placement="top" arrow>
                           <Button
                             onClick={(e) => {
                               if (isFuture) return;
-                              if (animationsEnabled && showProgress && !completed && weeklyCount === weeklyRequired - 1) {
+                              if (animationsEnabled && showProgress && !completed && currentWeekCount === weeklyRequired - 1) {
                                 const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
                                 confetti({
                                   particleCount: 80,

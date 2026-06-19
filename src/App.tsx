@@ -28,6 +28,7 @@ import { useAppStore } from './store';
 
 import { generateDates, generateWeekDates, startOfWeek, formatDateKey, formatRange } from './utils/dateUtils';
 import { getStoredHandle, storeHandle, generateExportJSON } from './utils/fileSystem';
+import { validateImportData } from './utils/importValidation';
 import ExerciseTable from './components/ExerciseTable';
 import StatsView from './components/StatsView';
 import ScheduleView from './components/ScheduleView';
@@ -272,11 +273,9 @@ const ExerciseTracker = () => {
       let parsed: unknown;
       try { parsed = JSON.parse(result); }
       catch { setImportFeedback({ open: true, message: 'Invalid JSON file.', severity: 'error' }); return; }
-      if (
-        typeof parsed !== 'object' || parsed === null ||
-        !('version' in parsed) || !('exercises' in parsed) || !('completions' in parsed)
-      ) {
-        setImportFeedback({ open: true, message: 'Unrecognised file format — missing required fields.', severity: 'error' });
+      const validation = validateImportData(parsed);
+      if (!validation.valid) {
+        setImportFeedback({ open: true, message: `Import failed: ${validation.error}`, severity: 'error' });
         return;
       }
       const data = parsed as {

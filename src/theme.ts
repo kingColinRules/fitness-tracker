@@ -1,5 +1,7 @@
 import { createTheme } from '@mui/material/styles';
 
+export const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
+
 declare module '@mui/material/styles' {
   interface Palette {
     heatmap: string[];
@@ -60,7 +62,7 @@ export const createAppTheme = (mode: 'light' | 'dark') =>
       heatmap: mode === 'dark'
         ? ['#374151', '#7c2d12', '#b45309', '#f97316', '#dc2626']
         : ['#f3f4f6', '#ffedd5', '#fdba74', '#fb923c', '#ef4444'],
-      chartColors: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'],
+      chartColors: CHART_COLORS,
     },
     typography: {
       fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',

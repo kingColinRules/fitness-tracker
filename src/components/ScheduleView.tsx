@@ -13,14 +13,15 @@ import Checkbox from '@mui/material/Checkbox';
 import Tooltip from '@mui/material/Tooltip';
 import Button from '@mui/material/Button';
 import AddIcon from '@mui/icons-material/Add';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import SelfImprovementIcon from '@mui/icons-material/SelfImprovement';
 import AccessibilityNewIcon from '@mui/icons-material/AccessibilityNew';
 import { alpha, useTheme } from '@mui/material/styles';
-import type {} from '../theme';
 import { useAppStore } from '../store';
 import type { WeeklyScheduleEntry } from '../store';
 import { formatDateKey } from '../utils/dateUtils';
+import { CHART_COLORS } from '../theme';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const TODAY = new Date();
@@ -51,7 +52,14 @@ const ExerciseChip: React.FC<{
     >
       <Chip
         size="small"
-        label={exercise.name}
+        label={
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '2px', overflow: 'hidden' }}>
+            <DragIndicatorIcon sx={{ fontSize: 11, opacity: 0.4, flexShrink: 0 }} />
+            <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {exercise.name}
+            </Box>
+          </Box>
+        }
         onDelete={overlay ? undefined : onRemove}
         icon={
           <Box sx={{ display: 'flex', alignItems: 'center', color }}>
@@ -299,6 +307,9 @@ const WeekView: React.FC<{
       if (fromIdx === -1) return prev;
 
       if (activeDay === overDay) {
+        if (isColDrop) {
+          return { ...prev, [activeDay]: arrayMove(sourceArr, fromIdx, sourceArr.length - 1) };
+        }
         const toIdx = sourceArr.findIndex(e => e.category === overCat && e.name === overName);
         if (toIdx === -1) return prev;
         return { ...prev, [activeDay]: arrayMove(sourceArr, fromIdx, toIdx) };
@@ -314,7 +325,7 @@ const WeekView: React.FC<{
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'stretch' }}>
+      <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'stretch', overflowX: 'auto', pb: 0.5 }}>
         {DAYS.map((day, i) => (
           <WeekColumn
             key={day} day={day} dayIdx={i}
@@ -371,7 +382,6 @@ const CalendarCell: React.FC<{
   allExercises: Record<string, string[]>;
 }> = ({ date, weeklySchedule, completions, categoryColors, allExercises }) => {
   const theme = useTheme();
-  const isDark = theme.palette.mode === 'dark';
 
   if (!date) return <Box sx={{ flex: 1, minWidth: 0 }} />;
 
@@ -380,7 +390,6 @@ const CalendarCell: React.FC<{
 
   const isTodayCell = d.getTime() === t.getTime();
   const isPast = d < t;
-  const isFuture = d > t;
 
   const dayName = DAYS[(date.getDay() + 6) % 7];
   const catOrder = Object.keys(allExercises);
@@ -464,6 +473,7 @@ const CalendarCell: React.FC<{
                 <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
                   <Box sx={{ width: 4, height: 4, borderRadius: '50%', flexShrink: 0, backgroundColor: alpha(color, 0.9) }} />
                   <Typography variant="labelSm" sx={{
+                    flex: 1, minWidth: 0,
                     lineHeight: 1.3,
                     overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
                     color: 'text.primary',
@@ -540,14 +550,13 @@ const MonthView: React.FC<{
 
 const ScheduleView: React.FC<{ selectedMonth: number; selectedYear: number }> = ({ selectedMonth, selectedYear }) => {
   const { chartMode, weeklySchedule, setWeeklySchedule, exercises, completions, goalSettings, exerciseGoals } = useAppStore();
-  const theme = useTheme();
   const isMonth = chartMode === 'monthly';
 
   const categoryColors = useMemo(
     () => Object.fromEntries(
-      Object.keys(exercises).map((cat, idx) => [cat, theme.palette.chartColors[idx % theme.palette.chartColors.length]])
+      Object.keys(exercises).map((cat, idx) => [cat, CHART_COLORS[idx % CHART_COLORS.length]])
     ),
-    [exercises, theme.palette.chartColors],
+    [exercises],
   );
 
   const scheduleProgress = useMemo(
@@ -586,7 +595,7 @@ const ScheduleView: React.FC<{ selectedMonth: number; selectedYear: number }> = 
   }, []);
 
   const handleAdd = (day: string, exs: WeeklyScheduleEntry[]) =>
-    setWeeklySchedule(prev => ({ ...prev, [day]: sortByCategory([...(prev[day] ?? []), ...exs]) }));
+    setWeeklySchedule(prev => ({ ...prev, [day]: [...(prev[day] ?? []), ...sortByCategory(exs)] }));
 
   return (
     <Box sx={{ borderRadius: 2, boxShadow: 2, px: 3, pt: 2, pb: 3, backgroundColor: 'background.paper' }}>
