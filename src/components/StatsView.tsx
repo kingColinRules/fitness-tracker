@@ -243,7 +243,7 @@ const StatsView: React.FC<StatsViewProps> = ({
       weeksInMonth.forEach(weekStart => {
         const wDates = generateWeekDates(weekStart);
         const daysInMonth = wDates.filter(d => d.getMonth() === selectedMonth && d.getFullYear() === selectedYear).length;
-        if (daysInMonth < 7) return;
+        if (daysInMonth < 4) return;
         const weekPeriodStart = formatDateKey(weekStart);
         let weekMet = 0;
         enabledCats.forEach(([cat, goal]) => {
@@ -423,7 +423,7 @@ const StatsView: React.FC<StatsViewProps> = ({
           sparkData={goalsSparkData}
           plotType="line"
           color={theme.palette.warning.main}
-          tooltip={goalsConfigured ? (isWeekly ? "Goals fully met by each day of the week (cumulative)" : "Goals fully met per full week in the month") : "No goals configured — set goals in Settings to track progress"}
+          tooltip={goalsConfigured ? (isWeekly ? "Goals fully met by each day of the week (cumulative)" : "Goals fully met per week in the month") : "No goals configured — set goals in Settings to track progress"}
           sparkValueFormatter={v => `${v ?? 0} goal${v !== 1 ? 's' : ''} met`}
         />
         <StatCard
