@@ -274,7 +274,7 @@ const ExerciseTracker = () => {
       try { parsed = JSON.parse(result); }
       catch { setImportFeedback({ open: true, message: 'Invalid JSON file.', severity: 'error' }); return; }
       const validation = validateImportData(parsed);
-      if (!validation.valid) {
+      if (validation.valid === false) {
         setImportFeedback({ open: true, message: `Import failed: ${validation.error}`, severity: 'error' });
         return;
       }

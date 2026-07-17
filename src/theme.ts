@@ -11,15 +11,6 @@ declare module '@mui/material/styles' {
     heatmap?: string[];
     chartColors?: string[];
   }
-  interface TypographyPropsVariantOverrides {
-    labelMicro: true;
-    labelXs: true;
-    labelSm: true;
-    labelLg: true;
-    iconSm: true;
-    iconMd: true;
-    iconLg: true;
-  }
   interface TypographyVariants {
     labelMicro: React.CSSProperties;
     labelXs: React.CSSProperties;
@@ -37,6 +28,18 @@ declare module '@mui/material/styles' {
     iconSm?: React.CSSProperties;
     iconMd?: React.CSSProperties;
     iconLg?: React.CSSProperties;
+  }
+}
+
+declare module '@mui/material/Typography' {
+  interface TypographyPropsVariantOverrides {
+    labelMicro: true;
+    labelXs: true;
+    labelSm: true;
+    labelLg: true;
+    iconSm: true;
+    iconMd: true;
+    iconLg: true;
   }
 }
 
