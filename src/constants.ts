@@ -2,6 +2,6 @@ export const APP_NAME = 'Fitness Tracker';
 
 export const DEFAULT_EXERCISES: Record<string, string[]> = {
   Weight: ['Bench Press', 'Squats', 'Deadlifts', 'Overhead Press', 'Rows'],
-  Isometric: ['Plank', 'Wall Sit', 'Hollow Body Hold', 'L-Sit'],
+  Cardio: ['Running', 'Cycling', 'Rowing', 'Swimming'],
   Stretch: ['Hamstring Stretch', 'Quad Stretch', 'Shoulder Stretch', 'Hip Flexor Stretch'],
 };
