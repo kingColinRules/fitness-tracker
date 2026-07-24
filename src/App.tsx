@@ -8,6 +8,13 @@ import Toolbar from '@mui/material/Toolbar';
 import IconButton from '@mui/material/IconButton';
 import ToggleButton from '@mui/material/ToggleButton';
 import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
+import Tabs from '@mui/material/Tabs';
+import Tab from '@mui/material/Tab';
+import BottomNavigation from '@mui/material/BottomNavigation';
+import BottomNavigationAction from '@mui/material/BottomNavigationAction';
+import ListAltOutlinedIcon from '@mui/icons-material/ListAltOutlined';
+import EventNoteOutlinedIcon from '@mui/icons-material/EventNoteOutlined';
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import MuiTooltip from '@mui/material/Tooltip';
@@ -22,7 +29,9 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import CalendarMonthIcon from '@mui/icons-material/CalendarMonth';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import LastPageIcon from '@mui/icons-material/LastPage';
 import dayjs, { Dayjs } from 'dayjs';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { createAppTheme } from './theme';
 import { useAppStore } from './store';
 
@@ -30,6 +39,7 @@ import { generateDates, generateWeekDates, startOfWeek, formatDateKey, formatRan
 import { getStoredHandle, storeHandle, generateExportJSON } from './utils/fileSystem';
 import { validateImportData } from './utils/importValidation';
 import ExerciseTable from './components/ExerciseTable';
+import MobileDayView from './components/MobileDayView';
 import StatsView from './components/StatsView';
 import ScheduleView from './components/ScheduleView';
 import SettingsModal from './components/SettingsModal';
@@ -41,11 +51,11 @@ import { useBadges } from './hooks/useBadges';
 const ExerciseTracker = () => {
   const {
     exercises, completions, exerciseDescriptions, exerciseGoals, goalSettings, weeklySchedule,
-    darkMode, compactView, chartMode, weekStartDay, defaultChartMode, animationsEnabled, showScheduleInLog, useCustomAppName, appName,
+    darkMode, chartMode, weekStartDay, defaultChartMode, animationsEnabled, showScheduleInLog, showDescriptionsInLog, useCustomAppName, appName,
     hasUnsavedExport, setHasUnsavedExport, setChartMode,
     setExercises, setCompletions, setGoalSettings, setExerciseDescriptions, setExerciseGoals,
-    setDarkMode, setCompactView, setDefaultChartMode, setWeekStartDay, setAnimationsEnabled,
-    setShowScheduleInLog, setUseCustomAppName, setAppName, setSeenBadges,
+    setDarkMode, setDefaultChartMode, setWeekStartDay, setAnimationsEnabled,
+    setShowScheduleInLog, setShowDescriptionsInLog, setUseCustomAppName, setAppName, setSeenBadges,
     seenBadges,
   } = useAppStore();
 
@@ -63,9 +73,10 @@ const ExerciseTracker = () => {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [weekStartDate, setWeekStartDate] = useState<Date>(() => startOfWeek(new Date(), weekStartDay));
   const [selectedDateValue, setSelectedDateValue] = useState<Dayjs | null>(dayjs(new Date()));
-  const [exerciseColumnWidth, setExerciseColumnWidth] = useState<number>(compactView ? 72 : 200);
+  const [exerciseColumnWidth, setExerciseColumnWidth] = useState<number>(200);
 
   const theme = useMemo(() => createAppTheme(darkMode ? 'dark' : 'light'), [darkMode]);
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const tableWrapperRef = useRef<HTMLDivElement>(null);
   const exerciseHeaderRef = useRef<HTMLTableCellElement>(null);
@@ -92,7 +103,7 @@ const ExerciseTracker = () => {
       window.removeEventListener('resize', measure);
       ro?.disconnect();
     };
-  }, [compactView, selectedMonth, selectedYear, chartMode]);
+  }, [selectedMonth, selectedYear, chartMode]);
 
   // Persist completions
   useEffect(() => {
@@ -129,14 +140,22 @@ const ExerciseTracker = () => {
   // Persist settings
   useEffect(() => {
     try {
-      localStorage.setItem('exerciseSettings', JSON.stringify({ darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled, showScheduleInLog, useCustomAppName, appName }));
+      localStorage.setItem('exerciseSettings', JSON.stringify({ darkMode, goalSettings, defaultChartMode, weekStartDay, animationsEnabled, showScheduleInLog, showDescriptionsInLog, useCustomAppName, appName }));
     } catch (e) { console.error('Storage error:', e); }
-  }, [darkMode, compactView, goalSettings, defaultChartMode, weekStartDay, animationsEnabled, showScheduleInLog, useCustomAppName, appName]);
+  }, [darkMode, goalSettings, defaultChartMode, weekStartDay, animationsEnabled, showScheduleInLog, showDescriptionsInLog, useCustomAppName, appName]);
 
   useEffect(() => {
     try { localStorage.setItem('seenBadges', JSON.stringify(seenBadges)); }
     catch (e) { console.error('Storage error:', e); }
   }, [seenBadges]);
+
+  // Sticky "Exercise"/"Goal" header columns cover the left edge of the
+  // scroll container at every scroll position — centering against the
+  // full clientWidth can land a target column underneath them.
+  const getStickyWidth = (container: HTMLElement): number => {
+    const el = container.querySelector('[data-sticky-end]') as HTMLElement | null;
+    return el ? el.offsetLeft + el.offsetWidth : 0;
+  };
 
   const scrollToTodayImmediate = () => {
     const todayStr = formatDateKey(new Date());
@@ -144,16 +163,18 @@ const ExerciseTracker = () => {
     if (!container) return;
     const el = container.querySelector(`th[data-date="${todayStr}"]`) as HTMLElement | null;
     if (el) {
-      const offset = el.offsetLeft - (container.clientWidth / 2) + (el.clientWidth / 2);
+      const stickyWidth = getStickyWidth(container);
+      const freeWidth = container.clientWidth - stickyWidth;
+      const offset = el.offsetLeft - stickyWidth - (freeWidth / 2) + (el.clientWidth / 2);
       container.scrollTo({ left: Math.max(0, offset), behavior: 'smooth' });
     }
   };
 
-  // Scroll to today when month/year/compactView changes
+  // Scroll to today when month/year changes
   useEffect(() => {
     const t = setTimeout(scrollToTodayImmediate, 150);
     return () => clearTimeout(t);
-  }, [selectedMonth, selectedYear, compactView]);
+  }, [selectedMonth, selectedYear]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dates = generateDates(selectedYear, selectedMonth);
   const tableDates = chartMode === 'weekly' ? generateWeekDates(weekStartDate) : dates;
@@ -187,13 +208,75 @@ const ExerciseTracker = () => {
     }
   };
 
+  const jumpToToday = () => {
+    const now = new Date();
+    if (chartMode === 'weekly') {
+      setWeekStartDate(startOfWeek(now, weekStartDay));
+    } else {
+      setSelectedMonth(now.getMonth());
+      setSelectedYear(now.getFullYear());
+      setSelectedDateValue(dayjs(now));
+    }
+    setTimeout(scrollToTodayImmediate, 150);
+  };
+
+  // Mobile Insights: independent Week/Month period, separate from the Log/Schedule chartMode
+  // so switching it doesn't affect what those tabs show (same relationship the old custom-range
+  // picker had — mobile-Insights-only, no cross-tab effects).
+  const [insightsMobileMode, setInsightsMobileMode] = useState<'weekly' | 'monthly'>('weekly');
+  const [insightsMobileWeekStart, setInsightsMobileWeekStart] = useState<Date>(() => startOfWeek(new Date(), weekStartDay));
+  const [insightsMobileMonth, setInsightsMobileMonth] = useState(() => new Date().getMonth());
+  const [insightsMobileYear, setInsightsMobileYear] = useState(() => new Date().getFullYear());
+  const [insightsMobilePickerOpen, setInsightsMobilePickerOpen] = useState(false);
+  const insightsMobileCalendarAnchorRef = useRef<HTMLButtonElement>(null);
+  const insightsMobileDates = generateDates(insightsMobileYear, insightsMobileMonth);
+
+  const insightsMobileToday = new Date();
+  const insightsMobileCurrentWeekStart = startOfWeek(insightsMobileToday, weekStartDay);
+  const insightsMobileIsAtLatest = insightsMobileMode === 'weekly'
+    ? insightsMobileWeekStart >= insightsMobileCurrentWeekStart
+    : insightsMobileYear === insightsMobileToday.getFullYear() && insightsMobileMonth === insightsMobileToday.getMonth();
+
+  const insightsMobilePrevPeriod = () => {
+    if (insightsMobileMode === 'weekly') {
+      setInsightsMobileWeekStart(d => new Date(d.getTime() - 7 * 24 * 60 * 60 * 1000));
+    } else {
+      const d = new Date(insightsMobileYear, insightsMobileMonth - 1, 1);
+      setInsightsMobileMonth(d.getMonth());
+      setInsightsMobileYear(d.getFullYear());
+    }
+  };
+
+  const insightsMobileNextPeriod = () => {
+    if (insightsMobileIsAtLatest) return;
+    if (insightsMobileMode === 'weekly') {
+      setInsightsMobileWeekStart(d => new Date(d.getTime() + 7 * 24 * 60 * 60 * 1000));
+    } else {
+      const d = new Date(insightsMobileYear, insightsMobileMonth + 1, 1);
+      setInsightsMobileMonth(d.getMonth());
+      setInsightsMobileYear(d.getFullYear());
+    }
+  };
+
+  const insightsMobileJumpToToday = () => {
+    const now = new Date();
+    if (insightsMobileMode === 'weekly') {
+      setInsightsMobileWeekStart(startOfWeek(now, weekStartDay));
+    } else {
+      setInsightsMobileMonth(now.getMonth());
+      setInsightsMobileYear(now.getFullYear());
+    }
+  };
+
   const scrollToDate = (date: Date) => {
     const dateStr = formatDateKey(date);
     const container = tableWrapperRef.current;
     if (!container) return;
     const el = container.querySelector(`th[data-date="${dateStr}"]`) as HTMLElement | null;
     if (el) {
-      const offset = el.offsetLeft - (container.clientWidth / 2) + (el.clientWidth / 2);
+      const stickyWidth = getStickyWidth(container);
+      const freeWidth = container.clientWidth - stickyWidth;
+      const offset = el.offsetLeft - stickyWidth - (freeWidth / 2) + (el.clientWidth / 2);
       container.scrollTo({ left: Math.max(0, offset), behavior: 'smooth' });
     }
   };
@@ -203,7 +286,7 @@ const ExerciseTracker = () => {
     const json = generateExportJSON(
       state.exercises, state.completions, state.goalSettings, state.exerciseDescriptions, state.weeklySchedule,
       state.exerciseGoals,
-      { darkMode: state.darkMode, compactView: state.compactView, defaultChartMode: state.defaultChartMode, weekStartDay: state.weekStartDay, animationsEnabled: state.animationsEnabled, showScheduleInLog: state.showScheduleInLog, useCustomAppName: state.useCustomAppName, appName: state.appName, seenBadges: state.seenBadges },
+      { darkMode: state.darkMode, defaultChartMode: state.defaultChartMode, weekStartDay: state.weekStartDay, animationsEnabled: state.animationsEnabled, showScheduleInLog: state.showScheduleInLog, showDescriptionsInLog: state.showDescriptionsInLog, useCustomAppName: state.useCustomAppName, appName: state.appName, seenBadges: state.seenBadges },
     );
     const writable = await handle.createWritable();
     await writable.write(json);
@@ -217,16 +300,21 @@ const ExerciseTracker = () => {
     const json = generateExportJSON(
       state.exercises, state.completions, state.goalSettings, state.exerciseDescriptions, state.weeklySchedule,
       state.exerciseGoals,
-      { darkMode: state.darkMode, compactView: state.compactView, defaultChartMode: state.defaultChartMode, weekStartDay: state.weekStartDay, animationsEnabled: state.animationsEnabled, showScheduleInLog: state.showScheduleInLog, useCustomAppName: state.useCustomAppName, appName: state.appName, seenBadges: state.seenBadges },
+      { darkMode: state.darkMode, defaultChartMode: state.defaultChartMode, weekStartDay: state.weekStartDay, animationsEnabled: state.animationsEnabled, showScheduleInLog: state.showScheduleInLog, showDescriptionsInLog: state.showDescriptionsInLog, useCustomAppName: state.useCustomAppName, appName: state.appName, seenBadges: state.seenBadges },
     );
     if (!('showSaveFilePicker' in window)) {
+      // iOS Safari requires the anchor to actually be in the DOM to honor a
+      // synthetic click, and revoking the object URL synchronously can race
+      // the download before it starts — so append/remove and delay the revoke.
       const blob = new Blob([json], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'exercise-tracker.json';
+      document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      setTimeout(() => window.URL.revokeObjectURL(url), 1000);
       localStorage.setItem('lastExportDate', new Date().toISOString());
       setHasUnsavedExport(false);
       return;
@@ -244,6 +332,7 @@ const ExerciseTracker = () => {
   };
 
   const saveToFile = async () => {
+    if (!('showSaveFilePicker' in window)) { await exportToJSON(); return; }
     if (fileHandleRef.current) {
       const perm = await (fileHandleRef.current as FileSystemFileHandle & { queryPermission: (opts: object) => Promise<string> }).queryPermission({ mode: 'readwrite' });
       if (perm === 'granted') { await writeJSON(fileHandleRef.current); return; }
@@ -287,11 +376,11 @@ const ExerciseTracker = () => {
         exerciseGoals?: Record<string, { override: boolean; required: number; disabled?: boolean }>;
         preferences?: {
           darkMode?: boolean;
-          compactView?: boolean;
           defaultChartMode?: 'weekly' | 'monthly';
           weekStartDay?: number;
           animationsEnabled?: boolean;
           showScheduleInLog?: boolean;
+          showDescriptionsInLog?: boolean;
           useCustomAppName?: boolean;
           appName?: string;
           seenBadges?: string[];
@@ -306,11 +395,11 @@ const ExerciseTracker = () => {
       if (data.preferences) {
         const p = data.preferences;
         if (p.darkMode !== undefined) setDarkMode(p.darkMode);
-        if (p.compactView !== undefined) setCompactView(p.compactView);
         if (p.defaultChartMode !== undefined) setDefaultChartMode(p.defaultChartMode);
         if (p.weekStartDay !== undefined) setWeekStartDay(p.weekStartDay);
         if (p.animationsEnabled !== undefined) setAnimationsEnabled(p.animationsEnabled);
         if (p.showScheduleInLog !== undefined) setShowScheduleInLog(p.showScheduleInLog);
+        if (p.showDescriptionsInLog !== undefined) setShowDescriptionsInLog(p.showDescriptionsInLog);
         if (p.useCustomAppName !== undefined) setUseCustomAppName(p.useCustomAppName);
         if (p.appName !== undefined) setAppName(p.appName);
         if (p.seenBadges !== undefined) setSeenBadges(p.seenBadges);
@@ -368,17 +457,17 @@ const ExerciseTracker = () => {
           </Toolbar>
         </AppBar>
 
-        <Box sx={{ p: 3 }}>
+        <Box sx={{ p: { xs: 1.5, sm: 3 }, pb: isMobile ? 8 : { xs: 1.5, sm: 3 } }}>
           <Box sx={{ maxWidth: 1200, mx: 'auto' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: { xs: 'flex-start', sm: 'space-between' }, gap: 2, mb: 2, flexWrap: 'wrap', rowGap: 1 }}>
-              <Box>
+              <Box sx={{ display: isMobile ? 'none' : 'block' }}>
                 <ToggleButtonGroup color="primary" value={activeView} exclusive onChange={(_e, val) => { if (val) setActiveView(val); }} size="small" aria-label="View">
                   <ToggleButton value="table">Log</ToggleButton>
                   <ToggleButton value="schedule">Schedule</ToggleButton>
                   <ToggleButton value="stats">Insights</ToggleButton>
                 </ToggleButtonGroup>
               </Box>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{ display: isMobile && (activeView === 'table' || activeView === 'schedule') ? 'none' : 'flex', flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'stretch' : 'center', width: isMobile ? '100%' : 'auto', gap: 1, flexWrap: 'wrap', rowGap: 0.5 }}>
                 <LocalizationProvider dateAdapter={AdapterDayjs}>
                   <DatePicker
                     views={chartMode === 'weekly' ? ['year', 'month', 'day'] : ['year', 'month']}
@@ -406,38 +495,109 @@ const ExerciseTracker = () => {
                     }}
                   />
                 </LocalizationProvider>
-                <Typography variant="body2" sx={{ fontWeight: 500, color: 'inherit' }}>
-                  {chartMode === 'weekly'
-                    ? formatRange(weekStartDate, new Date(weekStartDate.getFullYear(), weekStartDate.getMonth(), weekStartDate.getDate() + 6))
-                    : dayjs(selectedDateValue).format('MMMM YYYY')}
-                </Typography>
-                <IconButton ref={calendarAnchorRef} size="small" color="inherit" onClick={() => setPickerOpen(true)} aria-label="Open calendar">
-                  <CalendarMonthIcon fontSize="small" />
-                </IconButton>
-                <ToggleButtonGroup color="primary" value={chartMode} exclusive onChange={(_e, val) => { if (val) { setExerciseColumnWidth(val === 'weekly' ? 160 : 100); setChartMode(val); } }} size="small" aria-label="Chart Mode">
-                  <ToggleButton value="weekly">Week</ToggleButton>
-                  <ToggleButton value="monthly">Month</ToggleButton>
-                </ToggleButtonGroup>
-                <IconButton onClick={prevPeriod} color="inherit" size="small" aria-label="Previous period"><ChevronLeftIcon /></IconButton>
-                <IconButton onClick={nextPeriod} color="inherit" size="small" disabled={isAtLatestPeriod} aria-label="Next period"><ChevronRightIcon /></IconButton>
+                {isMobile ? (
+                  <>
+                    <LocalizationProvider dateAdapter={AdapterDayjs}>
+                      <DatePicker
+                        views={insightsMobileMode === 'weekly' ? ['year', 'month', 'day'] : ['year', 'month']}
+                        openTo={insightsMobileMode === 'weekly' ? 'day' : 'month'}
+                        value={insightsMobileMode === 'weekly' ? dayjs(insightsMobileWeekStart) : dayjs(new Date(insightsMobileYear, insightsMobileMonth, 1))}
+                        open={insightsMobilePickerOpen}
+                        onClose={() => setInsightsMobilePickerOpen(false)}
+                        onChange={(newVal) => {
+                          if (!newVal) return;
+                          const d = (newVal as Dayjs).toDate();
+                          if (insightsMobileMode === 'weekly') {
+                            setInsightsMobileWeekStart(startOfWeek(d, weekStartDay));
+                          } else {
+                            setInsightsMobileMonth(d.getMonth());
+                            setInsightsMobileYear(d.getFullYear());
+                          }
+                        }}
+                        maxDate={dayjs()}
+                        slotProps={{
+                          textField: { sx: { display: 'none' } },
+                          popper: { anchorEl: () => insightsMobileCalendarAnchorRef.current },
+                        }}
+                      />
+                    </LocalizationProvider>
+                    <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1, mt: 1 }}>
+                      <IconButton
+                        ref={insightsMobileCalendarAnchorRef}
+                        size="small"
+                        onClick={() => setInsightsMobilePickerOpen(true)}
+                        aria-label="Open calendar"
+                        sx={{ position: 'absolute', left: 0, p: 1.5 }}
+                      >
+                        <CalendarMonthIcon fontSize="small" />
+                      </IconButton>
+                      <IconButton onClick={insightsMobilePrevPeriod} size="small" aria-label="Previous period" sx={{ p: 1.5 }}><ChevronLeftIcon /></IconButton>
+                      <Typography variant="subtitle1" sx={{ fontWeight: 600, minWidth: 160, textAlign: 'center' }}>
+                        {insightsMobileMode === 'weekly'
+                          ? formatRange(insightsMobileWeekStart, new Date(insightsMobileWeekStart.getFullYear(), insightsMobileWeekStart.getMonth(), insightsMobileWeekStart.getDate() + 6))
+                          : dayjs(new Date(insightsMobileYear, insightsMobileMonth, 1)).format('MMMM YYYY')}
+                      </Typography>
+                      <IconButton onClick={insightsMobileNextPeriod} size="small" disabled={insightsMobileIsAtLatest} aria-label="Next period" sx={{ p: 1.5 }}><ChevronRightIcon /></IconButton>
+                      <IconButton onClick={insightsMobileJumpToToday} size="small" disabled={insightsMobileIsAtLatest} aria-label="Jump to today" sx={{ position: 'absolute', right: 0, p: 1.5 }}><LastPageIcon /></IconButton>
+                    </Box>
+                    <Tabs
+                      value={insightsMobileMode}
+                      onChange={(_e, val) => setInsightsMobileMode(val)}
+                      centered
+                      sx={{ minHeight: 36, mt: 1, mb: 1.5 }}
+                    >
+                      <Tab value="weekly" label="Week" sx={{ minHeight: 36, py: 0.5 }} />
+                      <Tab value="monthly" label="Month" sx={{ minHeight: 36, py: 0.5 }} />
+                    </Tabs>
+                  </>
+                ) : (
+                  <>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <Typography variant="body2" sx={{ fontWeight: 500, color: 'inherit', whiteSpace: 'nowrap' }}>
+                        {chartMode === 'weekly'
+                          ? formatRange(weekStartDate, new Date(weekStartDate.getFullYear(), weekStartDate.getMonth(), weekStartDate.getDate() + 6))
+                          : dayjs(selectedDateValue).format('MMMM YYYY')}
+                      </Typography>
+                      <IconButton ref={calendarAnchorRef} size="small" color="inherit" onClick={() => setPickerOpen(true)} aria-label="Open calendar">
+                        <CalendarMonthIcon fontSize="small" />
+                      </IconButton>
+                    </Box>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <ToggleButtonGroup color="primary" value={chartMode} exclusive onChange={(_e, val) => { if (val) { setExerciseColumnWidth(val === 'weekly' ? 160 : 100); setChartMode(val); } }} size="small" aria-label="Chart Mode">
+                        <ToggleButton value="weekly">Week</ToggleButton>
+                        <ToggleButton value="monthly">Month</ToggleButton>
+                      </ToggleButtonGroup>
+                      <IconButton onClick={prevPeriod} color="inherit" size="small" aria-label="Previous period"><ChevronLeftIcon /></IconButton>
+                      <IconButton onClick={nextPeriod} color="inherit" size="small" disabled={isAtLatestPeriod} aria-label="Next period"><ChevronRightIcon /></IconButton>
+                      {(activeView === 'table' || activeView === 'stats' || activeView === 'schedule') && (
+                        <IconButton onClick={jumpToToday} color="inherit" size="small" disabled={isAtLatestPeriod} aria-label="Jump to today"><LastPageIcon /></IconButton>
+                      )}
+                    </Box>
+                  </>
+                )}
               </Box>
             </Box>
 
             {activeView === 'table' && (
-              <ExerciseTable
-                tableDates={tableDates}
-                exerciseColumnWidth={exerciseColumnWidth}
-                tableWrapperRef={tableWrapperRef}
-                exerciseHeaderRef={exerciseHeaderRef}
-              />
+              isMobile ? (
+                <MobileDayView />
+              ) : (
+                <ExerciseTable
+                  tableDates={tableDates}
+                  exerciseColumnWidth={exerciseColumnWidth}
+                  tableWrapperRef={tableWrapperRef}
+                  exerciseHeaderRef={exerciseHeaderRef}
+                />
+              )
             )}
 
             {activeView === 'stats' && (
               <StatsView
-                weekStartDate={weekStartDate}
-                dates={dates}
-                selectedMonth={selectedMonth}
-                selectedYear={selectedYear}
+                weekStartDate={isMobile ? insightsMobileWeekStart : weekStartDate}
+                dates={isMobile ? insightsMobileDates : dates}
+                selectedMonth={isMobile ? insightsMobileMonth : selectedMonth}
+                selectedYear={isMobile ? insightsMobileYear : selectedYear}
+                chartModeOverride={isMobile ? insightsMobileMode : undefined}
               />
             )}
 
@@ -484,6 +644,19 @@ const ExerciseTracker = () => {
             {importFeedback.message}
           </Alert>
         </Snackbar>
+
+        {isMobile && (
+          <BottomNavigation
+            value={activeView}
+            onChange={(_e, val) => setActiveView(val)}
+            showLabels
+            sx={{ position: 'fixed', bottom: 0, left: 0, right: 0, borderTop: 1, borderColor: 'divider', zIndex: (t) => t.zIndex.appBar }}
+          >
+            <BottomNavigationAction label="Log" value="table" icon={<ListAltOutlinedIcon />} />
+            <BottomNavigationAction label="Schedule" value="schedule" icon={<EventNoteOutlinedIcon />} />
+            <BottomNavigationAction label="Insights" value="stats" icon={<InsightsOutlinedIcon />} />
+          </BottomNavigation>
+        )}
       </Box>
     </ThemeProvider>
   );

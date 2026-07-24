@@ -31,9 +31,9 @@ export type WeeklyScheduleEntry = { category: string; name: string };
 export type WeeklySchedule = Record<string, WeeklyScheduleEntry[]>;
 
 const DEFAULT_GOAL_SETTINGS: GoalSettings = {
-  weight: { enabled: true, required: 3 },
-  isometric: { enabled: true, required: 2 },
-  stretch: { enabled: true, required: 2 },
+  Weight: { enabled: true, required: 3 },
+  Cardio: { enabled: true, required: 2 },
+  Stretch: { enabled: true, required: 2 },
 };
 
 interface AppState {
@@ -47,12 +47,12 @@ interface AppState {
 
   // Settings
   darkMode: boolean;
-  compactView: boolean;
   defaultChartMode: 'weekly' | 'monthly';
   chartMode: 'weekly' | 'monthly';
   weekStartDay: number;
   animationsEnabled: boolean;
   showScheduleInLog: boolean;
+  showDescriptionsInLog: boolean;
   useCustomAppName: boolean;
   appName: string;
 
@@ -68,12 +68,12 @@ interface AppState {
   setGoalSettings: (v: Updater<GoalSettings>) => void;
   setWeeklySchedule: (v: Updater<WeeklySchedule>) => void;
   setDarkMode: (v: boolean) => void;
-  setCompactView: (v: boolean) => void;
   setDefaultChartMode: (v: 'weekly' | 'monthly') => void;
   setChartMode: (v: 'weekly' | 'monthly') => void;
   setWeekStartDay: (v: number) => void;
   setAnimationsEnabled: (v: boolean) => void;
   setShowScheduleInLog: (v: boolean) => void;
+  setShowDescriptionsInLog: (v: boolean) => void;
   setUseCustomAppName: (v: boolean) => void;
   setAppName: (v: string) => void;
   setHasUnsavedExport: (v: boolean) => void;
@@ -102,12 +102,12 @@ export const useAppStore = create<AppState>()((set) => ({
   exerciseGoals: readLS<ExerciseGoals>('exerciseGoals') ?? {},
   goalSettings: readSetting<GoalSettings>('goalSettings', DEFAULT_GOAL_SETTINGS),
   darkMode: readSetting<boolean>('darkMode', false),
-  compactView: readSetting<boolean>('compactView', false),
   defaultChartMode: readSetting<'weekly' | 'monthly'>('defaultChartMode', 'weekly'),
   chartMode: readSetting<'weekly' | 'monthly'>('defaultChartMode', 'weekly'),
   weekStartDay: readSetting<number>('weekStartDay', 1),
   animationsEnabled: readSetting<boolean>('animationsEnabled', true),
   showScheduleInLog: readSetting<boolean>('showScheduleInLog', true),
+  showDescriptionsInLog: readSetting<boolean>('showDescriptionsInLog', true),
   useCustomAppName: readSetting<boolean>('useCustomAppName', false),
   appName: readSetting<string>('appName', 'Fitness Tracker'),
   hasUnsavedExport: initHasUnsavedExport(),
@@ -120,12 +120,12 @@ export const useAppStore = create<AppState>()((set) => ({
   setGoalSettings: (v) => set(s => ({ goalSettings: applyUpdater(s.goalSettings, v) })),
   setWeeklySchedule: (v) => set(s => ({ weeklySchedule: applyUpdater(s.weeklySchedule, v) })),
   setDarkMode: (v) => set({ darkMode: v }),
-  setCompactView: (v) => set({ compactView: v }),
   setDefaultChartMode: (v) => set({ defaultChartMode: v, chartMode: v }),
   setChartMode: (v) => set({ chartMode: v }),
   setWeekStartDay: (v) => set({ weekStartDay: v }),
   setAnimationsEnabled: (v) => set({ animationsEnabled: v }),
   setShowScheduleInLog: (v) => set({ showScheduleInLog: v }),
+  setShowDescriptionsInLog: (v) => set({ showDescriptionsInLog: v }),
   setUseCustomAppName: (v) => set({ useCustomAppName: v }),
   setAppName: (v) => set({ appName: v }),
   setHasUnsavedExport: (v) => set({ hasUnsavedExport: v }),

@@ -4,15 +4,22 @@ import type { DragEndEvent, DragStartEvent } from '@dnd-kit/core';
 import { SortableContext, useSortable, verticalListSortingStrategy, arrayMove } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import Box from '@mui/material/Box';
+import ButtonBase from '@mui/material/ButtonBase';
+import Paper from '@mui/material/Paper';
 import Typography from '@mui/material/Typography';
 import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
 import Divider from '@mui/material/Divider';
 import Popover from '@mui/material/Popover';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import Checkbox from '@mui/material/Checkbox';
 import Tooltip from '@mui/material/Tooltip';
 import Button from '@mui/material/Button';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import AddIcon from '@mui/icons-material/Add';
+import CloseIcon from '@mui/icons-material/Close';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
 import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
 import FitnessCenterIcon from '@mui/icons-material/FitnessCenter';
 import SelfImprovementIcon from '@mui/icons-material/SelfImprovement';
@@ -85,6 +92,80 @@ const ExerciseChip: React.FC<{
   );
 };
 
+const ExercisePickerContent: React.FC<{
+  grouped: Record<string, string[]>;
+  categoryColors: Record<string, string>;
+  getRemaining: (cat: string, name: string) => number | null;
+  onConfirm: (exs: { category: string; name: string }[]) => void;
+}> = ({ grouped, categoryColors, getRemaining, onConfirm }) => {
+  const theme = useTheme();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const toggleKey = (cat: string, name: string) => {
+    const key = `${cat}-${name}`;
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      return next;
+    });
+  };
+
+  const handleConfirm = () => {
+    const toAdd = Object.entries(grouped).flatMap(([cat, names]) =>
+      names.filter(name => selected.has(`${cat}-${name}`)).map(name => ({ category: cat, name }))
+    );
+    if (toAdd.length > 0) onConfirm(toAdd);
+  };
+
+  return (
+    <Box sx={{ minWidth: 200, display: 'flex', flexDirection: 'column' }}>
+      <Box sx={{ maxHeight: 280, overflowY: 'auto', py: 0.5 }}>
+        {Object.entries(grouped).map(([cat, names]) => {
+          const color = categoryColors[cat] ?? theme.palette.text.secondary;
+          return (
+            <Box key={cat}>
+              <Typography variant="labelXs" sx={{ px: 1.5, py: 0.5, display: 'block', color, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                {cat}
+              </Typography>
+              {names.map(name => {
+                const key = `${cat}-${name}`;
+                const isSelected = selected.has(key);
+                return (
+                  <Box
+                    key={name}
+                    onClick={() => toggleKey(cat, name)}
+                    sx={{ px: 1, py: 0.25, cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' }, display: 'flex', alignItems: 'center', gap: 0.5 }}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      size="small"
+                      disableRipple
+                      sx={{ p: 0.5, color, '&.Mui-checked': { color } }}
+                    />
+                    <Typography variant="labelSm" sx={{ flex: 1 }}>{name}</Typography>
+                    {(() => {
+                      const rem = getRemaining(cat, name);
+                      if (rem === null) return null;
+                      if (rem === 0) return <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'success.main', flexShrink: 0 }} />;
+                      return <Typography variant="labelXs" sx={{ color: alpha(color, 0.8), fontWeight: 700, flexShrink: 0 }}>+{rem}</Typography>;
+                    })()}
+                  </Box>
+                );
+              })}
+            </Box>
+          );
+        })}
+      </Box>
+      <Divider />
+      <Box sx={{ px: 1.5, py: 1, display: 'flex', justifyContent: 'flex-end' }}>
+        <Button size="small" variant="contained" disabled={selected.size === 0} onClick={handleConfirm}>
+          Add{selected.size > 0 ? ` (${selected.size})` : ''}
+        </Button>
+      </Box>
+    </Box>
+  );
+};
+
 const DroppableList: React.FC<{
   day: string;
   itemIds: string[];
@@ -113,7 +194,6 @@ const WeekColumn: React.FC<{
   const theme = useTheme();
   const { exerciseGoals, goalSettings } = useAppStore();
   const [pickerAnchor, setPickerAnchor] = useState<HTMLElement | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const getRemaining = (cat: string, name: string): number | null => {
     const eg = exerciseGoals[`${cat}-${name}`];
@@ -137,26 +217,7 @@ const WeekColumn: React.FC<{
     names.map(name => ({ category: cat, name }))
   );
 
-  const toggleKey = (cat: string, name: string) => {
-    const key = `${cat}-${name}`;
-    setSelected(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  };
-
-  const handleConfirm = () => {
-    const toAdd = available.filter(ex => selected.has(`${ex.category}-${ex.name}`));
-    if (toAdd.length > 0) onAdd(toAdd);
-    setPickerAnchor(null);
-    setSelected(new Set());
-  };
-
-  const handleClose = () => {
-    setPickerAnchor(null);
-    setSelected(new Set());
-  };
+  const handleClose = () => setPickerAnchor(null);
 
   return (
     <Box sx={{
@@ -217,56 +278,12 @@ const WeekColumn: React.FC<{
         anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
         transformOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Box sx={{ minWidth: 200, display: 'flex', flexDirection: 'column' }}>
-          <Box sx={{ maxHeight: 280, overflowY: 'auto', py: 0.5 }}>
-            {Object.entries(grouped).map(([cat, names]) => {
-              const color = categoryColors[cat] ?? theme.palette.text.secondary;
-              return (
-                <Box key={cat}>
-                  <Typography variant="labelXs" sx={{ px: 1.5, py: 0.5, display: 'block', color, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                    {cat}
-                  </Typography>
-                  {names.map(name => {
-                    const key = `${cat}-${name}`;
-                    const isSelected = selected.has(key);
-                    return (
-                      <Box
-                        key={name}
-                        onClick={() => toggleKey(cat, name)}
-                        sx={{ px: 1, py: 0.25, cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' }, display: 'flex', alignItems: 'center', gap: 0.5 }}
-                      >
-                        <Checkbox
-                          checked={isSelected}
-                          size="small"
-                          disableRipple
-                          sx={{ p: 0.5, color, '&.Mui-checked': { color } }}
-                        />
-                        <Typography variant="labelSm" sx={{ flex: 1 }}>{name}</Typography>
-                        {(() => {
-                          const rem = getRemaining(cat, name);
-                          if (rem === null) return null;
-                          if (rem === 0) return <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'success.main', flexShrink: 0 }} />;
-                          return <Typography variant="labelXs" sx={{ color: alpha(color, 0.8), fontWeight: 700, flexShrink: 0 }}>+{rem}</Typography>;
-                        })()}
-                      </Box>
-                    );
-                  })}
-                </Box>
-              );
-            })}
-          </Box>
-          <Divider />
-          <Box sx={{ px: 1.5, py: 1, display: 'flex', justifyContent: 'flex-end' }}>
-            <Button
-              size="small"
-              variant="contained"
-              disabled={selected.size === 0}
-              onClick={handleConfirm}
-            >
-              Add{selected.size > 0 ? ` (${selected.size})` : ''}
-            </Button>
-          </Box>
-        </Box>
+        <ExercisePickerContent
+          grouped={grouped}
+          categoryColors={categoryColors}
+          getRemaining={getRemaining}
+          onConfirm={(exs) => { onAdd(exs); setPickerAnchor(null); }}
+        />
       </Popover>
     </Box>
   );
@@ -350,6 +367,206 @@ const WeekView: React.FC<{
         )}
       </DragOverlay>
     </DndContext>
+  );
+};
+
+// ─── Mobile weekly editor ───────────────────────────────────────────────────
+
+const MobileScheduleRow: React.FC<{
+  id: string;
+  exercise: WeeklyScheduleEntry;
+  color: string;
+  isLast: boolean;
+  onRemove: () => void;
+  onMoveClick: (anchor: HTMLElement) => void;
+}> = ({ id, exercise, color, isLast, onRemove, onMoveClick }) => {
+  const theme = useTheme();
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <Box
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      sx={{
+        display: 'flex', alignItems: 'center', gap: 1, px: 1.5, py: 1.25,
+        borderBottom: isLast ? 'none' : `1px solid ${theme.palette.divider}`,
+        opacity: isDragging ? 0.3 : 1,
+        backgroundColor: 'background.paper',
+      }}
+    >
+      <Box {...attributes} {...listeners} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'text.disabled', cursor: 'grab', touchAction: 'none', p: 1.5, m: -1.5 }}>
+        <DragIndicatorIcon fontSize="small" />
+      </Box>
+      <Box sx={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, backgroundColor: color }} />
+      <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 500 }}>{exercise.name}</Typography>
+      <Tooltip title="Reorder or move to another day">
+        <IconButton size="small" onClick={(e) => onMoveClick(e.currentTarget)} aria-label="Reorder or move to another day" sx={{ p: 1.5 }}>
+          <MoreVertIcon fontSize="small" />
+        </IconButton>
+      </Tooltip>
+      <IconButton size="small" onClick={onRemove} aria-label="Remove" sx={{ p: 1.5 }}>
+        <CloseIcon fontSize="small" />
+      </IconButton>
+    </Box>
+  );
+};
+
+const MobileWeekEditor: React.FC<{
+  weeklySchedule: Record<string, WeeklyScheduleEntry[]>;
+  allExercises: Record<string, string[]>;
+  categoryColors: Record<string, string>;
+  setWeeklySchedule: (v: ((prev: Record<string, WeeklyScheduleEntry[]>) => Record<string, WeeklyScheduleEntry[]>)) => void;
+}> = ({ weeklySchedule, allExercises, categoryColors, setWeeklySchedule }) => {
+  const theme = useTheme();
+  const { exerciseGoals, goalSettings } = useAppStore();
+  const [dayIdx, setDayIdx] = useState(TODAY_IDX);
+  const [pickerAnchor, setPickerAnchor] = useState<HTMLElement | null>(null);
+  const [moveMenu, setMoveMenu] = useState<{ anchor: HTMLElement; idx: number } | null>(null);
+
+  const day = DAYS[dayIdx];
+  const exercises = weeklySchedule[day] ?? [];
+  const itemIds = exercises.map(ex => `${ex.category}::${ex.name}`);
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const sortByCategory = (arr: WeeklyScheduleEntry[]) => {
+    const catOrder = Object.keys(allExercises);
+    return [...arr].sort((a, b) => {
+      const catDiff = catOrder.indexOf(a.category) - catOrder.indexOf(b.category);
+      if (catDiff !== 0) return catDiff;
+      const list = allExercises[a.category] ?? [];
+      return list.indexOf(a.name) - list.indexOf(b.name);
+    });
+  };
+
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    const fromIdx = exercises.findIndex(ex => `${ex.category}::${ex.name}` === active.id);
+    const toIdx = exercises.findIndex(ex => `${ex.category}::${ex.name}` === over.id);
+    if (fromIdx === -1 || toIdx === -1) return;
+    setWeeklySchedule(prev => ({ ...prev, [day]: arrayMove([...(prev[day] ?? [])], fromIdx, toIdx) }));
+  };
+
+  const handleRemove = (idx: number) =>
+    setWeeklySchedule(prev => ({ ...prev, [day]: (prev[day] ?? []).filter((_, i) => i !== idx) }));
+
+  const handleMoveTo = (idx: number, toDay: string) => {
+    setWeeklySchedule(prev => {
+      const src = [...(prev[day] ?? [])];
+      const [moved] = src.splice(idx, 1);
+      const dest = sortByCategory([...(prev[toDay] ?? []), moved]);
+      return { ...prev, [day]: src, [toDay]: dest };
+    });
+    setMoveMenu(null);
+  };
+
+  const handleReorder = (idx: number, delta: -1 | 1) => {
+    setWeeklySchedule(prev => ({ ...prev, [day]: arrayMove([...(prev[day] ?? [])], idx, idx + delta) }));
+    setMoveMenu(null);
+  };
+
+  const handleAdd = (exs: { category: string; name: string }[]) => {
+    setWeeklySchedule(prev => ({ ...prev, [day]: sortByCategory([...(prev[day] ?? []), ...exs]) }));
+    setPickerAnchor(null);
+  };
+
+  const getRemaining = (cat: string, name: string): number | null => {
+    const eg = exerciseGoals[`${cat}-${name}`];
+    if (!goalSettings[cat]?.enabled || eg?.disabled) return null;
+    const required = (eg?.override && !eg?.disabled) ? eg.required : (goalSettings[cat]?.required ?? 3);
+    const scheduled = Object.values(weeklySchedule).flat().filter(e => e.category === cat && e.name === name).length;
+    return Math.max(0, required - scheduled);
+  };
+
+  const grouped = Object.entries(allExercises).reduce<Record<string, string[]>>((acc, [cat, names]) => {
+    const avail = names.filter(name => !exercises.some(s => s.category === cat && s.name === name));
+    if (avail.length > 0) acc[cat] = avail;
+    return acc;
+  }, {});
+
+  return (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'center', gap: 0.375, mb: 1.5, overflowX: 'auto' }}>
+        {DAYS.map((d, i) => {
+          const hasExercises = (weeklySchedule[d] ?? []).length > 0;
+          const isSelected = i === dayIdx;
+          const isTodayCol = i === TODAY_IDX;
+          return (
+            <ButtonBase
+              key={d}
+              onClick={() => setDayIdx(i)}
+              aria-label={`Go to ${d}`}
+              sx={{
+                width: 36, minHeight: 52, flexShrink: 0, borderRadius: 1.5,
+                display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 0.4,
+                backgroundColor: isSelected ? 'primary.main' : 'transparent',
+                border: `1px solid ${isSelected ? theme.palette.primary.main : isTodayCol ? theme.palette.primary.main : 'transparent'}`,
+              }}
+            >
+              <Typography variant="labelXs" sx={{ fontWeight: 700, color: isSelected ? 'primary.contrastText' : isTodayCol ? 'primary.main' : 'text.secondary' }}>
+                {d}
+              </Typography>
+              <Box sx={{
+                width: 4, height: 4, borderRadius: '50%',
+                backgroundColor: hasExercises ? (isSelected ? theme.palette.primary.contrastText : theme.palette.success.main) : 'transparent',
+              }} />
+            </ButtonBase>
+          );
+        })}
+      </Box>
+
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
+          <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
+            {exercises.length === 0 ? (
+              <Box sx={{ py: 3, textAlign: 'center' }}>
+                <Typography variant="labelSm" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>Rest day</Typography>
+              </Box>
+            ) : (
+              exercises.map((ex, i) => (
+                <MobileScheduleRow
+                  key={`${ex.category}::${ex.name}`}
+                  id={`${ex.category}::${ex.name}`}
+                  exercise={ex}
+                  color={categoryColors[ex.category] ?? theme.palette.text.secondary}
+                  isLast={i === exercises.length - 1}
+                  onRemove={() => handleRemove(i)}
+                  onMoveClick={(anchor) => setMoveMenu({ anchor, idx: i })}
+                />
+              ))
+            )}
+          </Paper>
+        </SortableContext>
+      </DndContext>
+
+      <Button
+        fullWidth
+        startIcon={<AddIcon />}
+        onClick={(e) => setPickerAnchor(e.currentTarget)}
+        disabled={Object.keys(grouped).length === 0}
+        sx={{ mt: 1, borderStyle: 'dashed', borderWidth: 1, borderColor: 'divider', color: 'text.secondary' }}
+      >
+        Add exercise
+      </Button>
+
+      <Popover
+        open={Boolean(pickerAnchor)}
+        anchorEl={pickerAnchor}
+        onClose={() => setPickerAnchor(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <ExercisePickerContent grouped={grouped} categoryColors={categoryColors} getRemaining={getRemaining} onConfirm={handleAdd} />
+      </Popover>
+
+      <Menu open={Boolean(moveMenu)} anchorEl={moveMenu?.anchor} onClose={() => setMoveMenu(null)}>
+        <MenuItem disabled={moveMenu?.idx === 0} onClick={() => moveMenu && handleReorder(moveMenu.idx, -1)}>Move up</MenuItem>
+        <MenuItem disabled={moveMenu?.idx === exercises.length - 1} onClick={() => moveMenu && handleReorder(moveMenu.idx, 1)}>Move down</MenuItem>
+        <Divider />
+        {DAYS.filter(d => d !== day).map(d => (
+          <MenuItem key={d} onClick={() => moveMenu && handleMoveTo(moveMenu.idx, d)}>Move to {d}</MenuItem>
+        ))}
+      </Menu>
+    </Box>
   );
 };
 
@@ -551,6 +768,8 @@ const MonthView: React.FC<{
 const ScheduleView: React.FC<{ selectedMonth: number; selectedYear: number }> = ({ selectedMonth, selectedYear }) => {
   const { chartMode, weeklySchedule, setWeeklySchedule, exercises, completions, goalSettings, exerciseGoals } = useAppStore();
   const isMonth = chartMode === 'monthly';
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
 
   const categoryColors = useMemo(
     () => Object.fromEntries(
@@ -598,29 +817,35 @@ const ScheduleView: React.FC<{ selectedMonth: number; selectedYear: number }> = 
     setWeeklySchedule(prev => ({ ...prev, [day]: [...(prev[day] ?? []), ...sortByCategory(exs)] }));
 
   return (
-    <Box sx={{ borderRadius: 2, boxShadow: 2, px: 3, pt: 2, pb: 3, backgroundColor: 'background.paper' }}>
-      <Box sx={{ mb: 1 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-          {isMonth ? 'Monthly Schedule' : 'Weekly Schedule'}
-        </Typography>
-        <Typography variant="labelSm" sx={{ color: 'text.secondary' }}>
-          {isMonth
-            ? 'How your weekly schedule maps across this month'
-            : 'Your repeating weekly plan'}
-        </Typography>
-      </Box>
+    <Box sx={isMobile ? {} : { borderRadius: 2, boxShadow: 2, px: { xs: 1.5, sm: 3 }, pt: 2, pb: { xs: 2, sm: 3 }, backgroundColor: 'background.paper' }}>
+      {!isMobile && (
+        <Box sx={{ mb: 1 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
+            {isMonth ? 'Monthly Schedule' : 'Weekly Schedule'}
+          </Typography>
+          <Typography variant="labelSm" sx={{ color: 'text.secondary' }}>
+            {isMonth
+              ? 'How your weekly schedule maps across this month'
+              : 'Your repeating weekly plan'}
+          </Typography>
+        </Box>
+      )}
 
-      {isMonth
-        ? <MonthView weeklySchedule={weeklySchedule} completions={completions} categoryColors={categoryColors} allExercises={exercises} year={selectedYear} month={selectedMonth} />
-        : <WeekView weeklySchedule={weeklySchedule} allExercises={exercises} categoryColors={categoryColors} onRemove={handleRemove} onAdd={handleAdd} setWeeklySchedule={setWeeklySchedule} />}
+      {isMobile ? (
+        <MobileWeekEditor weeklySchedule={weeklySchedule} allExercises={exercises} categoryColors={categoryColors} setWeeklySchedule={setWeeklySchedule} />
+      ) : isMonth ? (
+        <MonthView weeklySchedule={weeklySchedule} completions={completions} categoryColors={categoryColors} allExercises={exercises} year={selectedYear} month={selectedMonth} />
+      ) : (
+        <WeekView weeklySchedule={weeklySchedule} allExercises={exercises} categoryColors={categoryColors} onRemove={handleRemove} onAdd={handleAdd} setWeeklySchedule={setWeeklySchedule} />
+      )}
 
-      <Box sx={{ display: 'flex', gap: 2, mt: 2, flexWrap: 'wrap' }}>
+      <Box sx={{ display: 'flex', gap: 2, mt: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
         {Object.keys(exercises).map(cat => {
           const progress = scheduleProgress[cat];
           return (
             <Box key={cat} sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
               <Box sx={{ width: 10, height: 10, borderRadius: '50%', backgroundColor: categoryColors[cat] }} />
-              <Typography variant="labelSm" sx={{ color: 'text.secondary' }}>{cat}</Typography>
+              <Typography variant="labelXs" sx={{ color: 'text.secondary' }}>{cat}</Typography>
               {progress && (
                 <Typography variant="labelXs" sx={{ color: progress.sessions < progress.goal ? 'warning.main' : 'success.main' }}>
                   ({progress.sessions}/{progress.goal} scheduled)

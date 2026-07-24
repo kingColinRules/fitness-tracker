@@ -49,11 +49,11 @@ export function generateExportJSON(
   exerciseGoals: Record<string, { override: boolean; required: number; disabled?: boolean }>,
   preferences: {
     darkMode: boolean;
-    compactView: boolean;
     defaultChartMode: 'weekly' | 'monthly';
     weekStartDay: number;
     animationsEnabled: boolean;
     showScheduleInLog: boolean;
+    showDescriptionsInLog: boolean;
     useCustomAppName: boolean;
     appName: string;
     seenBadges: string[];

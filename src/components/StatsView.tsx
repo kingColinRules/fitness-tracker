@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { SparkLineChart } from '@mui/x-charts/SparkLineChart';
+import { ChartsTooltip, useAxesTooltip, type ChartsTooltipProps } from '@mui/x-charts/ChartsTooltip';
 import { BarChart } from '@mui/x-charts/BarChart';
 import { Gauge, gaugeClasses } from '@mui/x-charts/Gauge';
 import Box from '@mui/material/Box';
@@ -10,7 +11,7 @@ import useMediaQuery from '@mui/material/useMediaQuery';
 import Collapse from '@mui/material/Collapse';
 import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp';
-import { formatDateKey, localDateStr, generateWeekDates, startOfWeek } from '../utils/dateUtils';
+import { formatDateKey, localDateStr, generateWeekDates, startOfWeek, months } from '../utils/dateUtils';
 import { useAppStore } from '../store';
 
 interface StatsViewProps {
@@ -18,6 +19,7 @@ interface StatsViewProps {
   dates: Date[];
   selectedMonth: number;
   selectedYear: number;
+  chartModeOverride?: 'weekly' | 'monthly';
 }
 
 const countDay = (
@@ -42,10 +44,25 @@ const getWeeksInMonth = (year: number, month: number, weekStartDay: number): Dat
   return weeks;
 };
 
+// Sparkline data is padded with `null` out to the full period length so the point/band scale
+// allocates the correct width per day (see the `data`/`xAxis.data` comment below) — but the axis
+// itself still needs one *distinct* array entry per day for that width math to stay correct, so
+// we can't null out the axis value for future days without breaking every card's width proportions.
+// Instead we suppress the tooltip for those days here, by checking the hovered dataIndex directly.
+const ConditionalTooltip: React.FC<ChartsTooltipProps<'axis'> & { realLength?: number }> = ({ realLength, ...props }) => {
+  const tooltipData = useAxesTooltip();
+  const isFuture = tooltipData?.some(d => d.axisDirection === 'x' && realLength !== undefined && d.dataIndex >= realLength);
+  if (isFuture) return null;
+  return <ChartsTooltip {...props} />;
+};
+
 interface StatCardProps {
   label: string;
   value: string | number;
   sparkData?: number[];
+  periodLength?: number;
+  sparkMax?: number;
+  sparkLabels?: string[];
   color: string;
   plotType?: 'line' | 'bar';
   tooltip?: string;
@@ -53,8 +70,7 @@ interface StatCardProps {
   sparkValueFormatter?: (value: number | null) => string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ label, value, sparkData = [], color, plotType = 'line', tooltip, sparkTooltip = true, sparkValueFormatter }) => (
-  <Tooltip title={tooltip ?? ''} placement="bottom" arrow>
+const StatCard: React.FC<StatCardProps> = ({ label, value, sparkData = [], periodLength, sparkMax, sparkLabels, color, plotType = 'line', tooltip, sparkTooltip = true, sparkValueFormatter }) => (
   <Box
     sx={{
       flex: { xs: '1 1 calc(50% - 8px)', md: 1 },
@@ -71,44 +87,59 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, sparkData = [], color
       '&:hover': { boxShadow: 4 },
     }}
   >
-    <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>
-      {label}
-    </Typography>
+    {/* Only the label/value are wrapped in the description tooltip — wrapping the sparkline too would
+        let it sit above the sparkline's own data tooltip (MUI Tooltip's z-index outranks ChartsTooltip's). */}
+    <Tooltip title={tooltip ?? ''} placement="bottom" arrow disableTouchListener>
+      <Typography variant="subtitle1" sx={{ fontWeight: 700, width: 'fit-content' }}>
+        {label}
+      </Typography>
+    </Tooltip>
     <Box sx={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 1 }}>
-      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, whiteSpace: 'nowrap' }}>
-        {String(value).includes('/') ? (() => {
-          const [num, denom] = String(value).split('/').map(s => s.trim());
-          return (
-            <>
-              <Typography variant="h4" sx={{ fontWeight: 600, color: 'text.primary' }}>{num}</Typography>
-              <Typography sx={{ fontWeight: 500, color: 'text.secondary', fontSize: '1.1rem' }}>/ {denom}</Typography>
-            </>
-          );
-        })() : (
-          <Typography variant="h4" sx={{ fontWeight: 600, color: 'text.primary' }}>{value}</Typography>
-        )}
-      </Box>
+      <Tooltip title={tooltip ?? ''} placement="bottom" arrow disableTouchListener>
+        <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5, whiteSpace: 'nowrap', width: 'fit-content' }}>
+          {String(value).includes('/') ? (() => {
+            const [num, denom] = String(value).split('/').map(s => s.trim());
+            return (
+              <>
+                <Typography variant="h4" sx={{ fontWeight: 600, color: 'text.primary' }}>{num}</Typography>
+                <Typography sx={{ fontWeight: 500, color: 'text.secondary', fontSize: '1.1rem' }}>/ {denom}</Typography>
+              </>
+            );
+          })() : (
+            <Typography variant="h4" sx={{ fontWeight: 600, color: 'text.primary' }}>{value}</Typography>
+          )}
+        </Box>
+      </Tooltip>
       {sparkData.length >= 2 ? (
-        <Box sx={{ overflow: 'visible' }}>
+        <Box sx={{ flex: '1 1 80px', minWidth: 0, height: 50, overflow: 'hidden' }}>
           <SparkLineChart
-            data={sparkData}
+            // SparkLineChart uses a point/band scale, which always spreads however many categories it's given
+            // across the full width (min/max only apply to continuous scales, so they're ignored here). To make
+            // a partial (elapsed-days-only) series only occupy its true share of the width, pad it out to the
+            // full period length with `null` — MUI's own default valueFormatter already treats null as "no data".
+            data={Array.from({ length: periodLength ?? sparkData.length }, (_, i) => sparkData[i] ?? null) as number[]}
+            xAxis={{
+              data: Array.from({ length: periodLength ?? sparkData.length }, (_, i) => i),
+              valueFormatter: (i: number) => sparkLabels?.[i] ?? '',
+            }}
+            yAxis={{ min: 0, max: sparkMax }}
             height={50}
-            width={120}
             color={color}
             plotType={plotType}
             curve="monotoneX"
             showTooltip={sparkTooltip}
             showHighlight={sparkTooltip}
             valueFormatter={sparkValueFormatter}
+            slots={{ tooltip: ConditionalTooltip }}
+            slotProps={{ tooltip: { realLength: sparkData.length } as ChartsTooltipProps<'axis'> }}
             margin={{ top: 8, bottom: 4, left: 4, right: 4 }}
           />
         </Box>
       ) : (
-        <Box sx={{ width: 120, height: 50 }} />
+        <Box sx={{ flex: '1 1 80px', minWidth: 0, height: 50 }} />
       )}
     </Box>
   </Box>
-  </Tooltip>
 );
 
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -118,54 +149,49 @@ const StatsView: React.FC<StatsViewProps> = ({
   dates,
   selectedMonth,
   selectedYear,
+  chartModeOverride,
 }) => {
   const { exercises, completions, goalSettings, exerciseGoals, chartMode, weekStartDay } = useAppStore();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const categories = Object.keys(exercises);
-  const isWeekly = chartMode === 'weekly';
+  const isWeekly = (chartModeOverride ?? chartMode) === 'weekly';
   const totalExercises = useMemo(() => Object.values(exercises).reduce((sum, exs) => sum + exs.length, 0), [exercises]);
 
   const weekDates = useMemo(() => generateWeekDates(weekStartDate), [weekStartDate]);
 
   const todayStr = localDateStr(new Date());
 
-  // Weekly per-day totals
-  const weekDailyTotals = useMemo(
-    () => weekDates.map(d => countDay(completions, exercises, formatDateKey(d))),
-    [weekDates, completions, exercises],
+  const periodDates = useMemo(
+    () => (isWeekly ? weekDates : dates),
+    [isWeekly, weekDates, dates],
   );
-  const weekTotal = weekDailyTotals.reduce((a, b) => a + b, 0);
-  const weekActiveDays = weekDailyTotals.filter(n => n > 0).length;
-  const weekSparkTotals = useMemo(
-    () => weekDates.filter(d => localDateStr(d) <= todayStr).map(d => countDay(completions, exercises, formatDateKey(d))),
-    [weekDates, completions, exercises, todayStr],
+
+  const periodDailyTotals = useMemo(
+    () => periodDates.map(d => countDay(completions, exercises, formatDateKey(d))),
+    [periodDates, completions, exercises],
   );
-  const weekActiveSparkData = weekSparkTotals.map(n => (n > 0 ? 1 : 0));
-  const weekCumulativeTotals = weekSparkTotals.reduce<number[]>((acc, v) => { acc.push((acc[acc.length - 1] ?? 0) + v); return acc; }, []);
-
-  // Monthly per-day totals
-  const monthDailyTotals = useMemo(
-    () => dates.map(d => countDay(completions, exercises, formatDateKey(d))),
-    [dates, completions, exercises],
+  const periodTotal = periodDailyTotals.reduce((a, b) => a + b, 0);
+  const periodActiveDays = periodDailyTotals.filter(n => n > 0).length;
+  // Sparklines only plot days that have actually happened — a fully past period naturally covers its whole length,
+  // but the in-progress current period must stop at today rather than flat-lining across days that haven't occurred yet.
+  const periodElapsedTotals = useMemo(
+    () => periodDates.filter(d => localDateStr(d) <= todayStr).map(d => countDay(completions, exercises, formatDateKey(d))),
+    [periodDates, completions, exercises, todayStr],
   );
-  const monthTotal = monthDailyTotals.reduce((a, b) => a + b, 0);
-  const activeDays = monthDailyTotals.filter(n => n > 0).length;
-  const monthSparkTotals = useMemo(
-    () => dates.filter(d => localDateStr(d) <= todayStr).map(d => countDay(completions, exercises, formatDateKey(d))),
-    [dates, completions, exercises, todayStr],
-  );
-  const monthActiveSparkData = monthSparkTotals.map(n => (n > 0 ? 1 : 0));
-  const monthCumulativeTotals = monthSparkTotals.reduce<number[]>((acc, v) => { acc.push((acc[acc.length - 1] ?? 0) + v); return acc; }, []);
+  const periodActiveSparkData = periodElapsedTotals.map(v => (v > 0 ? 1 : 0));
+  const periodCumulativeTotals = periodElapsedTotals.reduce<number[]>((acc, v) => { acc.push((acc[acc.length - 1] ?? 0) + v); return acc; }, []);
 
-  const daysElapsed = isWeekly ? weekSparkTotals.length : monthSparkTotals.length;
+  const daysElapsed = periodDates.length;
 
-  // Main stacked bar chart
-  const periodDates = isWeekly ? weekDates : dates;
-
+  const showDateNumber = !isWeekly;
   const mainXLabels = periodDates.map(d =>
     isWeekly ? DAY_NAMES[d.getDay()] : String(d.getDate()),
   );
+  // Stat-card sparkline tooltips stand alone (no visible month/year header nearby like the main
+  // chart has), so a bare day-of-month number is ambiguous — always include the month, in both
+  // weekly and monthly view, so the label format doesn't shift between the two.
+  const sparkTooltipLabels = periodDates.map(d => `${months[d.getMonth()].slice(0, 3)} ${d.getDate()}`);
   const mainSeries = useMemo(
     () =>
       categories.map((cat) => ({
@@ -210,7 +236,7 @@ const StatsView: React.FC<StatsViewProps> = ({
           if (count >= required) met++;
         });
       });
-      // Per-day cumulative goals met (only days up to today)
+      // Per-day cumulative goals met (only days that have actually happened)
       const spark = weekDates
         .filter(d => formatDateKey(d) <= todayStr)
         .map((_, dayIdx) => {
@@ -281,13 +307,12 @@ const StatsView: React.FC<StatsViewProps> = ({
   );
 
   const exercisePeriodData = useMemo(() => {
-    const periodStart = isWeekly
-      ? formatDateKey(weekDates[0])
-      : formatDateKey(new Date(selectedYear, selectedMonth, 1));
+    const periodStart = isWeekly ? formatDateKey(weekDates[0]) : formatDateKey(new Date(selectedYear, selectedMonth, 1));
     const weeksInMonth = getWeeksInMonth(selectedYear, selectedMonth, weekStartDay);
     const fullWeeks = weeksInMonth.filter(weekStart =>
       generateWeekDates(weekStart).filter(d => d.getMonth() === selectedMonth && d.getFullYear() === selectedYear).length === 7
     ).length;
+    const goalFor = (required: number) => (isWeekly ? required : required * fullWeeks);
     return categories.map(cat => {
       const catGoal = goalSettings[cat];
       return exercises[cat].map(ex => {
@@ -301,9 +326,9 @@ const StatsView: React.FC<StatsViewProps> = ({
           if (eg?.disabled) {
             goal = 0;
           } else if (eg?.override && !(eg.createdAt && eg.createdAt > periodStart)) {
-            goal = isWeekly ? eg.required : eg.required * fullWeeks;
+            goal = goalFor(eg.required);
           } else if (!eg?.override) {
-            goal = isWeekly ? catGoal.required : catGoal.required * fullWeeks;
+            goal = goalFor(catGoal.required);
           }
         }
         return { name: ex, completed, goal };
@@ -317,9 +342,8 @@ const StatsView: React.FC<StatsViewProps> = ({
       const wDates = generateWeekDates(weekStart);
       return wDates.filter(d => d.getMonth() === selectedMonth && d.getFullYear() === selectedYear).length === 7;
     }).length;
-    const periodStart = isWeekly
-      ? formatDateKey(weekDates[0])
-      : formatDateKey(new Date(selectedYear, selectedMonth, 1));
+    const periodStart = isWeekly ? formatDateKey(weekDates[0]) : formatDateKey(new Date(selectedYear, selectedMonth, 1));
+    const goalFor = (required: number) => (isWeekly ? required : required * fullWeeks);
     return categories.map(cat => {
       const catGoal = goalSettings[cat];
       if (!catGoal?.enabled || (catGoal.createdAt && catGoal.createdAt > periodStart)) return exercises[cat].length * periodDates.length;
@@ -328,9 +352,9 @@ const StatsView: React.FC<StatsViewProps> = ({
         if (eg?.disabled) return sum;
         if (eg?.override) {
           if (eg.createdAt && eg.createdAt > periodStart) return sum;
-          return sum + (isWeekly ? eg.required : eg.required * fullWeeks);
+          return sum + goalFor(eg.required);
         }
-        return sum + (isWeekly ? catGoal.required : catGoal.required * fullWeeks);
+        return sum + goalFor(catGoal.required);
       }, 0);
     });
   }, [categories, goalSettings, exerciseGoals, exercises, isWeekly, selectedYear, selectedMonth, weekStartDay, periodDates]);
@@ -340,17 +364,14 @@ const StatsView: React.FC<StatsViewProps> = ({
   const goalsConfigured = Object.values(goalSettings).some(g => g.enabled);
 
   const { onTrackCompleted, onTrackGoal } = useMemo(() => {
-    const completed = isWeekly ? weekTotal : monthTotal;
-    return { onTrackCompleted: completed, onTrackGoal: Math.max(1, totalGoalTarget) };
-  }, [isWeekly, weekTotal, monthTotal, totalGoalTarget]);
+    return { onTrackCompleted: periodTotal, onTrackGoal: Math.max(1, totalGoalTarget) };
+  }, [periodTotal, totalGoalTarget]);
 
 
   const scoreSparkData = useMemo(() => {
-    const dailyTotals = isWeekly ? weekSparkTotals : monthSparkTotals;
+    const dailyTotals = periodElapsedTotals;
 
-    const periodStart = isWeekly
-      ? formatDateKey(weekDates[0])
-      : formatDateKey(new Date(selectedYear, selectedMonth, 1));
+    const periodStart = isWeekly ? formatDateKey(weekDates[0]) : formatDateKey(new Date(selectedYear, selectedMonth, 1));
     let totalGoal = 0;
     if (goalsConfigured) {
       Object.entries(goalSettings).forEach(([cat, goal]) => {
@@ -384,18 +405,18 @@ const StatsView: React.FC<StatsViewProps> = ({
       }
       return Math.round(activeDaysPct);
     });
-  }, [isWeekly, weekSparkTotals, monthSparkTotals, goalSettings, exerciseGoals, exercises, gaugeValue, goalsConfigured, weekDates, selectedYear, selectedMonth]);
+  }, [periodElapsedTotals, goalSettings, exerciseGoals, exercises, gaugeValue, goalsConfigured, weekDates, selectedYear, selectedMonth, isWeekly]);
 
   const overallScore = scoreSparkData.at(-1) ?? 0;
 
   const bestDay = useMemo(() => {
-    const totals = isWeekly ? weekDailyTotals : monthDailyTotals;
-    const max = Math.max(...totals);
-    if (max === 0) return null;
-    const idx = totals.indexOf(max);
+    if (periodDailyTotals.length === 0) return null;
+    const max = Math.max(...periodDailyTotals);
+    if (max <= 0) return null;
+    const idx = periodDailyTotals.indexOf(max);
     const date = periodDates[idx];
     return { day: DAY_NAMES[date.getDay()], date, count: max };
-  }, [isWeekly, weekDailyTotals, monthDailyTotals, periodDates]);
+  }, [periodDailyTotals, periodDates]);
 
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
   const toggleCat = (cat: string) => setExpandedCats(prev => {
@@ -410,8 +431,11 @@ const StatsView: React.FC<StatsViewProps> = ({
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         <StatCard
           label="Exercises Completed"
-          value={`${isWeekly ? weekTotal : monthTotal} / ${totalGoalTarget}`}
-          sparkData={isWeekly ? weekCumulativeTotals : monthCumulativeTotals}
+          value={`${periodTotal} / ${totalGoalTarget}`}
+          sparkData={periodCumulativeTotals}
+          periodLength={daysElapsed}
+          sparkMax={Math.max(1, totalGoalTarget)}
+          sparkLabels={sparkTooltipLabels}
           color={theme.palette.primary.main}
           tooltip={goalsConfigured ? "Exercises completed vs. total goal target for the period (sum of all exercise goals)" : "Exercises completed vs. total possible sessions in the period (exercises × days)"}
 
@@ -421,15 +445,21 @@ const StatsView: React.FC<StatsViewProps> = ({
           label="Goals Met"
           value={goalsConfigured ? `${goalsMet} / ${goalsTotal}` : '—'}
           sparkData={goalsSparkData}
+          periodLength={isWeekly ? daysElapsed : undefined}
+          sparkMax={Math.max(1, goalsTotal)}
+          sparkLabels={isWeekly ? sparkTooltipLabels : goalsSparkData.map((_, i) => `Week ${i + 1}`)}
           plotType="line"
           color={theme.palette.warning.main}
-          tooltip={goalsConfigured ? (isWeekly ? "Goals fully met by each day of the week (cumulative)" : "Goals fully met per week in the month") : "No goals configured — set goals in Settings to track progress"}
+          tooltip={goalsConfigured ? (isWeekly ? "Goals fully met by each day of the period (cumulative)" : "Goals fully met per week in the month") : "No goals configured — set goals in Settings to track progress"}
           sparkValueFormatter={v => `${v ?? 0} goal${v !== 1 ? 's' : ''} met`}
         />
         <StatCard
           label="Active Days"
-          value={isWeekly ? `${weekActiveDays} / ${daysElapsed}` : `${activeDays} / ${daysElapsed}`}
-          sparkData={isWeekly ? weekActiveSparkData : monthActiveSparkData}
+          value={`${periodActiveDays} / ${daysElapsed}`}
+          sparkData={periodActiveSparkData}
+          periodLength={daysElapsed}
+          sparkMax={1}
+          sparkLabels={sparkTooltipLabels}
           plotType="bar"
           color={theme.palette.success.main}
           tooltip="Days where at least one exercise was completed, out of total days in the period"
@@ -439,6 +469,9 @@ const StatsView: React.FC<StatsViewProps> = ({
           label="Score"
           value={`${overallScore} / 100`}
           sparkData={scoreSparkData}
+          periodLength={daysElapsed}
+          sparkMax={100}
+          sparkLabels={sparkTooltipLabels}
           color={theme.palette.info.main}
           tooltip={goalsConfigured ? "Overall score: 50% goals met (exercises that hit their goal) + 50% volume (exercises done vs expected)" : "Score: percentage of days with at least one exercise completed"}
           sparkValueFormatter={v => `${v ?? 0} / 100`}
@@ -447,34 +480,11 @@ const StatsView: React.FC<StatsViewProps> = ({
 
       {/* Main chart + right column */}
       <Box sx={{ display: 'flex', gap: 2, alignItems: 'stretch', flexDirection: { xs: 'column', md: 'row' } }}>
-        {/* Stacked bar chart */}
-        <Box sx={{ flex: 3, borderRadius: 2, boxShadow: 2, p: 3, backgroundColor: 'background.paper', minWidth: 0, transition: 'box-shadow 0.15s ease', '&:hover': { boxShadow: 4 } }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
-            Completed by Day
-          </Typography>
-          <BarChart
-            colors={theme.palette.chartColors}
-            xAxis={[{ data: mainXLabels, scaleType: 'band' }]}
-            yAxis={[{ tickMinStep: 1 }]}
-            series={mainSeries}
-            height={isMobile ? 280 : 500}
-            slots={{ legend: () => null }}
-          />
-          <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', columnGap: 2, rowGap: 0.5 }}>
-            {categories.map((cat, idx) => (
-              <Box key={cat} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{ width: 11, height: 11, borderRadius: '2px', backgroundColor: theme.palette.chartColors[idx % theme.palette.chartColors.length], flexShrink: 0 }} />
-                <Typography variant="caption" sx={{ color: 'text.primary' }}>{cat}</Typography>
-              </Box>
-            ))}
-          </Box>
-        </Box>
-
-        {/* Right column */}
+        {/* Left column */}
         <Box sx={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
           {/* Goals + Exercises gauges side by side */}
           <Box sx={{ display: 'flex', gap: 2 }}>
-            <Tooltip title="Exercises completed out of your total goal for this period." placement="bottom" arrow>
+            <Tooltip title="Exercises completed out of your total goal for this period." placement="bottom" arrow disableTouchListener>
             <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper', textAlign: 'center', transition: 'box-shadow 0.15s ease', '&:hover': { boxShadow: 4 } }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
                 Exercise Progress
@@ -505,7 +515,7 @@ const StatsView: React.FC<StatsViewProps> = ({
             </Box>
             </Tooltip>
 
-            <Tooltip title="How many of your exercises have hit their goal for this period. 100% means every exercise has met its goal." placement="bottom" arrow>
+            <Tooltip title="How many of your exercises have hit their goal for this period. 100% means every exercise has met its goal." placement="bottom" arrow disableTouchListener>
             <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper', textAlign: 'center', transition: 'box-shadow 0.15s ease', '&:hover': { boxShadow: 4 } }}>
               <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 0.5 }}>
                 Goal Progress
@@ -520,7 +530,7 @@ const StatsView: React.FC<StatsViewProps> = ({
                     text={({ value }) => `${value}%`}
                     sx={{
                       [`& .${gaugeClasses.valueText}`]: { fontSize: theme.typography.h4.fontSize, fontWeight: 700 },
-                      [`& .${gaugeClasses.valueArc}`]: { fill: theme.palette.primary.main },
+                      [`& .${gaugeClasses.valueArc}`]: { fill: gaugeValue >= 100 ? theme.palette.success.main : theme.palette.chartColors[1] },
                     }}
                   />
                   <Typography variant="caption" sx={{ color: 'text.secondary', mt: 0.5 }}>
@@ -538,7 +548,7 @@ const StatsView: React.FC<StatsViewProps> = ({
 
           {/* Completed by Category for the current period */}
           <Box sx={{ flex: 1, borderRadius: 2, boxShadow: 2, p: 2, backgroundColor: 'background.paper', transition: 'box-shadow 0.15s ease', '&:hover': { boxShadow: 4 } }}>
-            <Tooltip title={goalsConfigured ? "Completions vs. goal target per category. The denominator is the sum of each exercise's weekly goal (multiplied by full weeks for monthly view). Categories without goals show total possible sessions." : "Completions vs. total possible sessions per category (exercises × days in period)"} placement="bottom" arrow>
+            <Tooltip title={goalsConfigured ? "Completions vs. goal target per category. The denominator is the sum of each exercise's weekly goal (multiplied by full weeks for monthly view). Categories without goals show total possible sessions." : "Completions vs. total possible sessions per category (exercises × days in period)"} placement="bottom" arrow disableTouchListener>
               <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1.5, display: 'inline-block' }}>Completed by Category</Typography>
             </Tooltip>
             {categories.length === 0 ? (
@@ -593,6 +603,29 @@ const StatsView: React.FC<StatsViewProps> = ({
             )}
           </Box>
         </Box>
+
+        {/* Stacked bar chart */}
+        <Box sx={{ flex: 3, borderRadius: 2, boxShadow: 2, p: 3, backgroundColor: 'background.paper', minWidth: 0, transition: 'box-shadow 0.15s ease', '&:hover': { boxShadow: 4 } }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, mb: 1 }}>
+            Completed by Day
+          </Typography>
+          <BarChart
+            colors={theme.palette.chartColors}
+            xAxis={[{ data: mainXLabels, scaleType: 'band' }]}
+            yAxis={[{ tickMinStep: 1, valueFormatter: (value) => String(Math.round(value)) }]}
+            series={mainSeries}
+            height={isMobile ? 280 : 500}
+            slots={{ legend: () => null }}
+          />
+          <Box sx={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', columnGap: 2, rowGap: 0.5 }}>
+            {categories.map((cat, idx) => (
+              <Box key={cat} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Box sx={{ width: 11, height: 11, borderRadius: '2px', backgroundColor: theme.palette.chartColors[idx % theme.palette.chartColors.length], flexShrink: 0 }} />
+                <Typography variant="caption" sx={{ color: 'text.primary' }}>{cat}</Typography>
+              </Box>
+            ))}
+          </Box>
+        </Box>
       </Box>
 
       {/* Activity */}
@@ -610,11 +643,15 @@ const StatsView: React.FC<StatsViewProps> = ({
           ))}
         </Box>
 
-        {/* Calendar grid */}
+        {/* Calendar grid — quantized into discrete steps (rather than a continuous alpha blend) so the
+            legend swatches below are an exact, honest key for the colors actually shown in the grid. */}
         {(() => {
-          const dailyTotals = isWeekly ? weekDailyTotals : monthDailyTotals;
+          const dailyTotals = periodDailyTotals;
           const maxCount = Math.max(totalExercises, 1);
           const offset = isWeekly ? 0 : (new Date(selectedYear, selectedMonth, 1).getDay() - weekStartDay + 7) % 7;
+          const heatSteps = [0.3, 0.55, 0.8, 1];
+          const heatColor = (intensity: number): string =>
+            intensity <= 0 ? '' : alpha(theme.palette.primary.main, heatSteps.find(s => intensity <= s) ?? 1);
           return (
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
               {Array.from({ length: offset }).map((_, i) => (
@@ -629,9 +666,7 @@ const StatsView: React.FC<StatsViewProps> = ({
                     <Box sx={{
                       height: 20,
                       borderRadius: '3px',
-                      backgroundColor: count === 0
-                        ? 'action.hover'
-                        : alpha(theme.palette.primary.main, 0.15 + intensity * 0.85),
+                      backgroundColor: count === 0 ? 'action.hover' : heatColor(intensity),
                       border: isToday ? `2px solid ${theme.palette.primary.main}` : '2px solid transparent',
                       cursor: 'default',
                     }} />
@@ -642,15 +677,15 @@ const StatsView: React.FC<StatsViewProps> = ({
           );
         })()}
 
-        {/* Legend */}
+        {/* Legend — same quantization as the grid above (0, and the top of each of the 4 heat steps) */}
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5, mt: 1.5 }}>
           <Typography variant="caption" sx={{ color: 'text.secondary', mr: 0.5 }}>Less</Typography>
-          {[0, 0.25, 0.5, 0.75, 1].map(intensity => (
+          {[0, 0.3, 0.55, 0.8, 1].map(intensity => (
             <Box key={intensity} sx={{
               width: 14,
               height: 14,
               borderRadius: '3px',
-              backgroundColor: intensity === 0 ? 'action.hover' : alpha(theme.palette.primary.main, 0.15 + intensity * 0.85),
+              backgroundColor: intensity === 0 ? 'action.hover' : alpha(theme.palette.primary.main, intensity),
             }} />
           ))}
           <Typography variant="caption" sx={{ color: 'text.secondary', ml: 0.5 }}>More</Typography>
@@ -667,7 +702,7 @@ const StatsView: React.FC<StatsViewProps> = ({
             <Typography variant="caption" sx={{ color: 'text.primary' }}>
               Best day:{' '}
               <strong>
-                {bestDay.day}{!isWeekly ? ` ${bestDay.date.getDate()}` : ''}
+                {bestDay.day}{showDateNumber ? ` ${bestDay.date.getDate()}` : ''}
               </strong>
               {' '}—{' '}
               <strong>{bestDay.count}</strong> exercise{bestDay.count !== 1 ? 's' : ''} completed

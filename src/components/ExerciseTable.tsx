@@ -19,6 +19,7 @@ import dayjs from 'dayjs';
 import { formatDateKey, isToday, isFutureDate } from '../utils/dateUtils';
 import { isCompleted as isCompletedUtil } from '../utils/completionUtils';
 import { useAppStore } from '../store';
+import LogLegend from './LogLegend';
 
 
 interface ExerciseTableProps {
@@ -36,7 +37,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
 }) => {
   const {
     exercises, completions, goalSettings, exerciseGoals, exerciseDescriptions, weeklySchedule,
-    chartMode, compactView, weekStartDay, animationsEnabled, showScheduleInLog,
+    chartMode, weekStartDay, animationsEnabled, showScheduleInLog, showDescriptionsInLog,
     toggleCompletion, updateExerciseDescription,
   } = useAppStore();
   const theme = useTheme();
@@ -58,8 +59,11 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
     setPopoverDesc('');
   };
 
-  const headerBg = theme.palette.action.hover;
-  const categoryBg = isDark ? theme.palette.background.default : alpha(theme.palette.primary.light, 0.13);
+  // These sit under position:sticky cells that must fully occlude scrolled-under
+  // columns, so they need an opaque color — translucent overlays (action.hover,
+  // alpha()) let the underlying date column show through when scrolled.
+  const headerBg = isDark ? '#374151' : '#f3f4f6';
+  const categoryBg = isDark ? theme.palette.background.default : '#dbeafe';
   const rowBg = theme.palette.background.paper;
 
 
@@ -104,11 +108,11 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
   return (
     <>
     <TableContainer ref={tableWrapperRef} component={Paper}>
-      <Table sx={{ width: '100%' }} size={compactView ? 'small' : 'medium'}>
+      <Table sx={{ width: '100%' }}>
         <TableHead>
           <TableRow sx={{ backgroundColor: headerBg }}>
             <TableCell ref={exerciseHeaderRef} sx={{ position: 'sticky', left: 0, zIndex: 70, minWidth: chartMode === 'weekly' ? 160 : 100, backgroundColor: headerBg, color: 'text.primary' }}>Exercise</TableCell>
-            <TableCell sx={{ position: 'sticky', left: `${exerciseColumnWidth}px`, zIndex: 60, textAlign: 'center', minWidth: 44, backgroundColor: headerBg, color: 'text.primary' }}>{chartMode === 'monthly' ? 'Wk Goals' : 'Goal'}</TableCell>
+            <TableCell data-sticky-end sx={{ position: 'sticky', left: `${exerciseColumnWidth}px`, zIndex: 60, textAlign: 'center', minWidth: 44, backgroundColor: headerBg, color: 'text.primary' }}>{chartMode === 'monthly' ? 'Wk Goals' : 'Goal'}</TableCell>
             {tableDates.map(date => (
               <TableCell key={date.toISOString()} data-date={formatDateKey(date)} align="center" sx={{ minWidth: chartMode === 'weekly' ? 80 : 24, borderColor: 'divider', borderBottom: isToday(date) ? `2px solid ${theme.palette.primary.main}` : undefined, color: 'text.primary', lineHeight: 1.2, px: 0.25, ...(chartMode === 'monthly' && date.getDay() === weekStartDay && { borderLeft: `2px solid ${theme.palette.divider}`, pl: 1 }), ...(chartMode === 'monthly' && date.getDay() === (weekStartDay + 6) % 7 && { pr: 1 }) }}>
                 <Box sx={{ fontSize: theme.typography.labelXs.fontSize, opacity: 0.7 }}>{dayjs(date).format('ddd')}</Box>
@@ -134,7 +138,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                   <TableRow key={exercise}>
                     <TableCell sx={{ fontWeight: 500, position: 'sticky', left: 0, zIndex: 70, backgroundColor: rowBg, color: 'text.primary', maxWidth: chartMode === 'weekly' ? 200 : 130, pr: 0.5 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exercise}</Box>
-                      {!compactView && (
+                      {showDescriptionsInLog && (
                         <Typography
                           variant="caption"
                           onClick={(e) => openDescriptionPopover(e, category, exercise)}
@@ -171,8 +175,8 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                           </Box>
                         ) : (
                           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 0.25 }}>
-                            <Box sx={{ width: compactView ? 24 : 28, height: compactView ? 4 : 6, borderRadius: 99, backgroundColor: 'divider', overflow: 'hidden' }}>
-                              <Box sx={{ height: '100%', width: `${Math.min(weeklyCount / weeklyRequired, 1) * 100}%`, borderRadius: 99, backgroundColor: weeklyCount >= weeklyRequired ? 'success.main' : 'warning.main', transition: 'width 0.3s ease' }} />
+                            <Box sx={{ width: 28, height: 6, borderRadius: 99, backgroundColor: 'divider', overflow: 'hidden' }}>
+                              <Box sx={{ height: '100%', width: `${Math.min(weeklyCount / weeklyRequired, 1) * 100}%`, borderRadius: 99, backgroundColor: weeklyCount >= weeklyRequired ? 'success.main' : weeklyCount > 0 ? 'warning.main' : 'text.secondary', transition: 'width 0.3s ease' }} />
                             </Box>
                             <Box sx={{ fontSize: theme.typography.labelMicro.fontSize, color: 'text.secondary', lineHeight: 1 }}>{weeklyCount}/{weeklyRequired}</Box>
                           </Box>
@@ -209,7 +213,6 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                             aria-pressed={!isFuture && completed}
                             disabled={isFuture}
                             fullWidth
-                            size={compactView ? 'small' : 'medium'}
                             sx={{
                               borderRadius: 1,
                               height: 44,
@@ -227,7 +230,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                             }}
                           >
                             {completed
-                              ? <CheckIcon sx={{ color: theme.palette.primary.contrastText, fontSize: compactView ? 14 : chartMode === 'monthly' ? 16 : 20 }} />
+                              ? <CheckIcon sx={{ color: theme.palette.primary.contrastText, fontSize: chartMode === 'monthly' ? 16 : 20 }} />
                               : null}
                           </Button>
                           </Tooltip>
@@ -242,6 +245,8 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
         </TableBody>
       </Table>
     </TableContainer>
+
+    <LogLegend />
 
     <Popover
       open={Boolean(popoverAnchor)}

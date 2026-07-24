@@ -94,7 +94,7 @@ export function validateImportData(parsed: unknown): { valid: true } | { valid: 
     const p = parsed.preferences;
     if (!isPlainObject(p))
       return { valid: false, error: 'Field "preferences" must be an object.' };
-    const boolFields = ['darkMode', 'compactView', 'animationsEnabled', 'showScheduleInLog', 'useCustomAppName'] as const;
+    const boolFields = ['darkMode', 'animationsEnabled', 'showScheduleInLog', 'showDescriptionsInLog', 'useCustomAppName'] as const;
     for (const field of boolFields) {
       if (field in p && typeof p[field] !== 'boolean')
         return { valid: false, error: `preferences.${field} must be a boolean.` };

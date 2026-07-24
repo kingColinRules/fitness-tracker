@@ -40,10 +40,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   savedFileName, exportToJSON, importFromJSON,
 }) => {
   const {
-    darkMode, setDarkMode, compactView, setCompactView,
+    darkMode, setDarkMode,
     defaultChartMode, setDefaultChartMode, weekStartDay, setWeekStartDay,
     animationsEnabled, setAnimationsEnabled,
     showScheduleInLog, setShowScheduleInLog,
+    showDescriptionsInLog, setShowDescriptionsInLog,
     useCustomAppName, setUseCustomAppName, appName, setAppName,
     exercises, setExercises, completions, setCompletions,
     goalSettings, setGoalSettings, exerciseGoals, setExerciseGoals,
@@ -311,7 +312,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           <IconButton onClick={onClose} sx={{ p: 1 }}><CloseIcon sx={(theme) => ({ fontSize: theme.typography.iconLg.fontSize })} /></IconButton>
         </Box>
         <Box sx={{ borderBottom: 1, borderColor: 'divider', flexShrink: 0 }}>
-          <Tabs value={activeTab} onChange={(_e, val) => setActiveTab(val)} sx={{ px: 3 }}>
+          <Tabs value={activeTab} onChange={(_e, val) => setActiveTab(val)} variant="scrollable" scrollButtons="auto" allowScrollButtonsMobile sx={{ px: 3 }}>
             <Tab label="Exercises" />
             <Tab label="Appearance" />
             <Tab label="Data and Backup" />
@@ -395,7 +396,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                       ) : (
                         exercises[category].map((exercise, index) => (
                           <Box key={exercise} draggable onDragStart={(e) => handleDragStart(e, category, index)} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, category, index)} sx={{ display: 'flex', alignItems: editingExercise?.category === category && editingExercise?.name === exercise ? 'flex-start' : 'center', gap: 1, p: 1, borderRadius: 1, cursor: 'grab', '&:hover': { backgroundColor: 'action.hover' } }}>
-                            <DragIndicatorIcon sx={{ color: 'text.secondary', marginTop: editingExercise?.category === category && editingExercise?.name === exercise ? 6 : 0, fontSize: compactView ? 12 : 16 }} />
+                            <DragIndicatorIcon sx={{ color: 'text.secondary', marginTop: editingExercise?.category === category && editingExercise?.name === exercise ? 6 : 0, fontSize: 16 }} />
                             {editingExercise?.category === category && editingExercise?.name === exercise ? (
                               <>
                                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
@@ -500,13 +501,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                 </ToggleButtonGroup>
               </Box>
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
-                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Size</Typography>
-                <ToggleButtonGroup color="primary" value={compactView ? 'compact' : 'normal'} exclusive onChange={(_e, val) => { if (val) setCompactView(val === 'compact'); }} size="small" aria-label="View size">
-                  <ToggleButton value="normal">Normal</ToggleButton>
-                  <ToggleButton value="compact">Compact</ToggleButton>
-                </ToggleButtonGroup>
-              </Box>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
                 <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Default Calendar View</Typography>
                 <ToggleButtonGroup color="primary" value={defaultChartMode} exclusive onChange={(_e, val) => { if (val) setDefaultChartMode(val); }} size="small" aria-label="Default calendar view">
                   <ToggleButton value="weekly">Week</ToggleButton>
@@ -531,6 +525,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
                 <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Show Schedule in Log</Typography>
                 <ToggleButtonGroup color="primary" value={showScheduleInLog ? 'on' : 'off'} exclusive onChange={(_e, val) => { if (val) setShowScheduleInLog(val === 'on'); }} size="small" aria-label="Schedule indicators">
+                  <ToggleButton value="on">On</ToggleButton>
+                  <ToggleButton value="off">Off</ToggleButton>
+                </ToggleButtonGroup>
+              </Box>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, p: 1 }}>
+                <Typography sx={{ fontWeight: 600, color: 'text.primary' }}>Show Exercise Descriptions in Log</Typography>
+                <ToggleButtonGroup color="primary" value={showDescriptionsInLog ? 'on' : 'off'} exclusive onChange={(_e, val) => { if (val) setShowDescriptionsInLog(val === 'on'); }} size="small" aria-label="Exercise descriptions">
                   <ToggleButton value="on">On</ToggleButton>
                   <ToggleButton value="off">Off</ToggleButton>
                 </ToggleButtonGroup>

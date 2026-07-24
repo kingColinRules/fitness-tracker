@@ -48,6 +48,7 @@ export const createAppTheme = (mode: 'light' | 'dark') =>
   createTheme({
     palette: {
       mode,
+      // Using Tailwind CSS's default palette instead of MUI's
       primary: { main: '#3b82f6' },
       success: { main: '#16a34a', dark: '#15803d' },
       warning: { main: '#f97316' },
