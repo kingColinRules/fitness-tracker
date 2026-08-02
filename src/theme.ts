@@ -6,10 +6,14 @@ declare module '@mui/material/styles' {
   interface Palette {
     heatmap: string[];
     chartColors: string[];
+    stickyHeaderBg: string;
+    stickyCategoryBg: string;
   }
   interface PaletteOptions {
     heatmap?: string[];
     chartColors?: string[];
+    stickyHeaderBg?: string;
+    stickyCategoryBg?: string;
   }
   interface TypographyVariants {
     labelMicro: React.CSSProperties;
@@ -44,8 +48,10 @@ declare module '@mui/material/Typography' {
 }
 
 
-export const createAppTheme = (mode: 'light' | 'dark') =>
-  createTheme({
+export const createAppTheme = (mode: 'light' | 'dark') => {
+  const backgroundDefault = mode === 'dark' ? '#111827' : '#f9fafb';
+
+  return createTheme({
     palette: {
       mode,
       // Using Tailwind CSS's default palette instead of MUI's
@@ -54,7 +60,7 @@ export const createAppTheme = (mode: 'light' | 'dark') =>
       warning: { main: '#f97316' },
       error: { main: '#ef4444' },
       background: {
-        default: mode === 'dark' ? '#111827' : '#f9fafb',
+        default: backgroundDefault,
         paper: mode === 'dark' ? '#1f2937' : '#ffffff',
       },
       divider: mode === 'dark' ? '#374151' : '#e5e7eb',
@@ -67,6 +73,10 @@ export const createAppTheme = (mode: 'light' | 'dark') =>
         ? ['#374151', '#7c2d12', '#b45309', '#f97316', '#dc2626']
         : ['#f3f4f6', '#ffedd5', '#fdba74', '#fb923c', '#ef4444'],
       chartColors: CHART_COLORS,
+      // Must be fully opaque (not a translucent overlay) — these sit under
+      // position:sticky cells that need to fully occlude scrolled-under columns.
+      stickyHeaderBg: mode === 'dark' ? '#374151' : '#f3f4f6',
+      stickyCategoryBg: mode === 'dark' ? backgroundDefault : '#dbeafe',
     },
     typography: {
       fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
@@ -116,3 +126,4 @@ export const createAppTheme = (mode: 'light' | 'dark') =>
       },
     },
   });
+};

@@ -59,11 +59,8 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
     setPopoverDesc('');
   };
 
-  // These sit under position:sticky cells that must fully occlude scrolled-under
-  // columns, so they need an opaque color — translucent overlays (action.hover,
-  // alpha()) let the underlying date column show through when scrolled.
-  const headerBg = isDark ? '#374151' : '#f3f4f6';
-  const categoryBg = isDark ? theme.palette.background.default : '#dbeafe';
+  const headerBg = theme.palette.stickyHeaderBg;
+  const categoryBg = theme.palette.stickyCategoryBg;
   const rowBg = theme.palette.background.paper;
 
 
