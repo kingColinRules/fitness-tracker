@@ -74,11 +74,11 @@ export function useBadges() {
 
       for (const [cat, gs] of enabledCats) {
         for (const ex of (exercises[cat] ?? [])) {
-          const eg = exerciseGoals[`${cat}-${ex}`];
+          const eg = exerciseGoals[ex.id];
           if (eg?.disabled) continue;
           const required = (eg?.override && !eg?.disabled) ? eg.required : gs.required;
           const exCount = weekDates.reduce(
-            (sum, d) => sum + (completions[`${cat}-${ex}-${formatDateKey(d)}`] ? 1 : 0),
+            (sum, d) => sum + (completions[`${ex.id}-${formatDateKey(d)}`] ? 1 : 0),
             0
           );
           if (exCount >= required) count++;

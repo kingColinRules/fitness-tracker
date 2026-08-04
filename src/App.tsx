@@ -37,7 +37,10 @@ import { useAppStore } from './store';
 
 import { generateDates, generateWeekDates, startOfWeek, formatDateKey, formatRange } from './utils/dateUtils';
 import { getStoredHandle, storeHandle, generateExportJSON } from './utils/fileSystem';
-import { validateImportData } from './utils/importValidation';
+import { validateImportData, validateCurrentImportData } from './utils/importValidation';
+import { migrateExerciseData } from './utils/migration';
+import { generateId } from './utils/id';
+import type { Exercise, WeeklyScheduleEntry } from './types';
 import ExerciseTable from './components/ExerciseTable';
 import MobileDayView from './components/MobileDayView';
 import StatsView from './components/StatsView';
@@ -367,25 +370,62 @@ const ExerciseTracker = () => {
         setImportFeedback({ open: true, message: `Import failed: ${validation.error}`, severity: 'error' });
         return;
       }
-      const data = parsed as {
-        exercises: Record<string, string[]>;
+      type Preferences = {
+        darkMode?: boolean;
+        defaultChartMode?: 'weekly' | 'monthly';
+        weekStartDay?: number;
+        animationsEnabled?: boolean;
+        showScheduleInLog?: boolean;
+        showDescriptionsInLog?: boolean;
+        useCustomAppName?: boolean;
+        appName?: string;
+        seenBadges?: string[];
+      };
+      const versioned = parsed as { version: number };
+      let data: {
+        exercises: Record<string, Exercise[]>;
         completions: Record<string, boolean>;
         goalSettings?: Record<string, { enabled: boolean; required: number }>;
         exerciseDescriptions?: Record<string, string>;
-        weeklySchedule?: Record<string, { category: string; name: string }[]>;
+        weeklySchedule?: Record<string, WeeklyScheduleEntry[]>;
         exerciseGoals?: Record<string, { override: boolean; required: number; disabled?: boolean }>;
-        preferences?: {
-          darkMode?: boolean;
-          defaultChartMode?: 'weekly' | 'monthly';
-          weekStartDay?: number;
-          animationsEnabled?: boolean;
-          showScheduleInLog?: boolean;
-          showDescriptionsInLog?: boolean;
-          useCustomAppName?: boolean;
-          appName?: string;
-          seenBadges?: string[];
-        };
+        preferences?: Preferences;
       };
+      if (versioned.version === 1) {
+        // The legacy (pre-id-migration) export shape — this branch must never be removed, since a
+        // file exported before the migration can be imported at any point in the future.
+        const legacy = parsed as {
+          exercises: Record<string, string[]>;
+          completions: Record<string, boolean>;
+          goalSettings?: Record<string, { enabled: boolean; required: number }>;
+          exerciseDescriptions?: Record<string, string>;
+          weeklySchedule?: Record<string, { category: string; name: string }[]>;
+          exerciseGoals?: Record<string, { override: boolean; required: number; disabled?: boolean }>;
+          preferences?: Preferences;
+        };
+        const migrated = migrateExerciseData({
+          exercises: legacy.exercises,
+          completions: legacy.completions,
+          exerciseDescriptions: legacy.exerciseDescriptions ?? {},
+          exerciseGoals: legacy.exerciseGoals ?? {},
+          weeklySchedule: legacy.weeklySchedule ?? {},
+        });
+        data = {
+          ...legacy,
+          exercises: migrated.exercises,
+          completions: migrated.completions,
+          exerciseDescriptions: migrated.exerciseDescriptions,
+          exerciseGoals: migrated.exerciseGoals,
+          weeklySchedule: migrated.weeklySchedule,
+        };
+      } else {
+        data = parsed as typeof data;
+      }
+      const revalidation = validateCurrentImportData(data as unknown as Record<string, unknown>);
+      if (revalidation.valid === false) {
+        setImportFeedback({ open: true, message: `Import failed: ${revalidation.error}`, severity: 'error' });
+        return;
+      }
       setExercises(data.exercises);
       setCompletions(data.completions);
       if (data.goalSettings) setGoalSettings(data.goalSettings);
@@ -423,7 +463,7 @@ const ExerciseTracker = () => {
   };
 
   const addExercise = (name: string, category: string) => {
-    setExercises(prev => ({ ...prev, [category]: [...prev[category], name] }));
+    setExercises(prev => ({ ...prev, [category]: [...prev[category], { id: generateId(), name }] }));
     setShowAddExercise(false);
   };
 

@@ -1,6 +1,5 @@
 export const isCompleted = (
   completions: Record<string, boolean>,
-  category: string,
-  exercise: string,
+  exerciseId: string,
   dateStr: string,
-): boolean => completions[`${category}-${exercise}-${dateStr}`] || false;
+): boolean => completions[`${exerciseId}-${dateStr}`] || false;

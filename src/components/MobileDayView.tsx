@@ -42,12 +42,12 @@ const MobileDayView: React.FC = () => {
     [selectedDate, weekStartDay],
   );
 
-  const isCompleted = (category: string, exercise: string): boolean =>
-    isCompletedUtil(completions, category, exercise, dateStr);
+  const isCompleted = (exerciseId: string): boolean =>
+    isCompletedUtil(completions, exerciseId, dateStr);
 
-  const calculateWeeklyCount = (category: string, exercise: string): number =>
+  const calculateWeeklyCount = (exerciseId: string): number =>
     weekDates.filter(date =>
-      !isFutureDate(date) && isCompletedUtil(completions, category, exercise, formatDateKey(date))
+      !isFutureDate(date) && isCompletedUtil(completions, exerciseId, formatDateKey(date))
     ).length;
 
   const goToDay = (delta: number) => {
@@ -116,16 +116,16 @@ const MobileDayView: React.FC = () => {
           </Typography>
           <Paper variant="outlined" sx={{ mt: 0.5, overflow: 'hidden' }}>
             {exerciseList.map((exercise, i) => {
-              const completed = isCompleted(category, exercise);
-              const eg = exerciseGoals[`${category}-${exercise}`];
+              const completed = isCompleted(exercise.id);
+              const eg = exerciseGoals[exercise.id];
               const showProgress = goalSettings[category]?.enabled && !eg?.disabled;
               const weeklyRequired = (eg?.override && !eg?.disabled) ? eg.required : (goalSettings[category]?.required || 3);
-              const weeklyCount = calculateWeeklyCount(category, exercise);
+              const weeklyCount = calculateWeeklyCount(exercise.id);
               const isFuture = isFutureDate(selectedDate);
-              const scheduled = (weeklySchedule[dayName] ?? []).some(e => e.category === category && e.name === exercise);
+              const scheduled = (weeklySchedule[dayName] ?? []).some(e => e.exerciseId === exercise.id);
               return (
                 <Box
-                  key={exercise}
+                  key={exercise.id}
                   sx={{
                     width: '100%',
                     display: 'flex',
@@ -138,14 +138,14 @@ const MobileDayView: React.FC = () => {
                 >
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography variant="body1" sx={{ fontWeight: 500, color: isFuture ? 'text.disabled' : 'text.primary' }}>
-                      {exercise}
+                      {exercise.name}
                     </Typography>
-                    {showDescriptionsInLog && exerciseDescriptions[`${category}-${exercise}`] && (
+                    {showDescriptionsInLog && exerciseDescriptions[exercise.id] && (
                       <Typography
                         variant="caption"
                         sx={{ color: 'text.secondary', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3, mt: 0.25 }}
                       >
-                        {exerciseDescriptions[`${category}-${exercise}`]}
+                        {exerciseDescriptions[exercise.id]}
                       </Typography>
                     )}
                     {showProgress && (
@@ -170,11 +170,11 @@ const MobileDayView: React.FC = () => {
                             zIndex: 9999,
                           });
                         }
-                        toggleCompletion(category, exercise, dateStr);
+                        toggleCompletion(exercise.id, dateStr);
                       }}
                       disabled={isFuture}
                       aria-pressed={!isFuture && completed}
-                      aria-label={`${exercise}, ${dayjs(selectedDate).format('MMM D')}`}
+                      aria-label={`${exercise.name}, ${dayjs(selectedDate).format('MMM D')}`}
                       sx={{
                         width: 44,
                         height: 44,

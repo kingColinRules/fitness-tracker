@@ -21,8 +21,9 @@ import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Tabs from '@mui/material/Tabs';
 import Tab from '@mui/material/Tab';
 import { getLastExportInfo } from '../utils/fileSystem';
-import { DEFAULT_EXERCISES } from '../constants';
+import { createDefaultExercises } from '../constants';
 import { useAppStore } from '../store';
+import type { Exercise } from '../types';
 
 interface SettingsModalProps {
   open: boolean;
@@ -48,14 +49,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     useCustomAppName, setUseCustomAppName, appName, setAppName,
     exercises, setExercises, completions, setCompletions,
     goalSettings, setGoalSettings, exerciseGoals, setExerciseGoals,
-    exerciseDescriptions, setExerciseDescriptions,
+    exerciseDescriptions, setExerciseDescriptions, setWeeklySchedule,
   } = useAppStore();
   const [activeTab, setActiveTab] = useState(0);
   const [editingCategory, setEditingCategory] = useState<string | null>(null);
   const [editCategoryName, setEditCategoryName] = useState('');
   const [editCategoryGoalEnabled, setEditCategoryGoalEnabled] = useState(false);
   const [editCategoryGoalRequired, setEditCategoryGoalRequired] = useState(3);
-  const [editingExercise, setEditingExercise] = useState<{ category: string; name: string } | null>(null);
+  const [editingExercise, setEditingExercise] = useState<{ category: string; id: string } | null>(null);
   const [editExerciseName, setEditExerciseName] = useState('');
   const [editExerciseDescription, setEditExerciseDescription] = useState('');
   const [editExerciseOverride, setEditExerciseOverride] = useState(false);
@@ -86,8 +87,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     const reordered = [...keys];
     reordered.splice(fromIndex, 1);
     reordered.splice(toIndex, 0, draggedCategory);
-    const newExercises: Record<string, string[]> = {};
-    const newGoalSettings: Record<string, { enabled: boolean; required: number }> = {};
+    const newExercises: Record<string, Exercise[]> = {};
+    const newGoalSettings: Record<string, { enabled: boolean; required: number; createdAt?: string }> = {};
     reordered.forEach(key => {
       newExercises[key] = exercises[key];
       newGoalSettings[key] = goalSettings[key];
@@ -105,47 +106,20 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const saveEditCategory = () => {
+    // Completions/descriptions/goals are keyed by exercise id, not category — renaming a category
+    // only ever needs to move its key in `exercises`/`goalSettings`, nothing else.
     const newKey = editCategoryName.trim();
-    if (newKey && editingCategory !== newKey) {
-      if (!exercises[newKey]) {
-        const newExercises: Record<string, string[]> = {};
-        Object.keys(exercises).forEach(key => {
-          newExercises[key === editingCategory ? newKey : key] = exercises[key];
-        });
-        setExercises(newExercises);
-        const newGoalSettings: Record<string, { enabled: boolean; required: number }> = {};
-        Object.keys(goalSettings).forEach(key => {
-          newGoalSettings[key === editingCategory ? newKey : key] = goalSettings[key];
-        });
-        setGoalSettings(newGoalSettings);
-        const newCompletions: Record<string, boolean> = {};
-        Object.keys(completions).forEach(key => {
-          if (key.startsWith(`${editingCategory}-`)) {
-            newCompletions[key.replace(`${editingCategory}-`, `${newKey}-`)] = completions[key];
-          } else {
-            newCompletions[key] = completions[key];
-          }
-        });
-        setCompletions(newCompletions);
-        const newDescriptions: Record<string, string> = {};
-        Object.keys(exerciseDescriptions).forEach(key => {
-          if (key.startsWith(`${editingCategory}-`)) {
-            newDescriptions[key.replace(`${editingCategory}-`, `${newKey}-`)] = exerciseDescriptions[key];
-          } else {
-            newDescriptions[key] = exerciseDescriptions[key];
-          }
-        });
-        setExerciseDescriptions(newDescriptions);
-        const newExerciseGoals: Record<string, { override: boolean; required: number }> = {};
-        Object.keys(exerciseGoals).forEach(key => {
-          if (key.startsWith(`${editingCategory}-`)) {
-            newExerciseGoals[key.replace(`${editingCategory}-`, `${newKey}-`)] = exerciseGoals[key];
-          } else {
-            newExerciseGoals[key] = exerciseGoals[key];
-          }
-        });
-        setExerciseGoals(newExerciseGoals);
-      }
+    if (newKey && editingCategory !== newKey && !exercises[newKey]) {
+      const newExercises: Record<string, Exercise[]> = {};
+      Object.keys(exercises).forEach(key => {
+        newExercises[key === editingCategory ? newKey : key] = exercises[key];
+      });
+      setExercises(newExercises);
+      const newGoalSettings: Record<string, { enabled: boolean; required: number; createdAt?: string }> = {};
+      Object.keys(goalSettings).forEach(key => {
+        newGoalSettings[key === editingCategory ? newKey : key] = goalSettings[key];
+      });
+      setGoalSettings(newGoalSettings);
     }
     setGoalSettings(prev => {
       const key = newKey ?? editingCategory!;
@@ -168,6 +142,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     setConfirmDialog({
       message: `Delete "${category}"?`,
       onConfirm: () => {
+        const deletedIds = new Set((exercises[category] ?? []).map(ex => ex.id));
         const newExercises = { ...exercises };
         delete newExercises[category];
         setExercises(newExercises);
@@ -176,23 +151,33 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         setGoalSettings(newGoalSettings);
         const newCompletions = { ...completions };
         Object.keys(newCompletions).forEach(key => {
-          if (key.startsWith(`${category}-`)) delete newCompletions[key];
+          if (deletedIds.has(key.slice(0, -11))) delete newCompletions[key];
         });
         setCompletions(newCompletions);
         const newDescriptions = { ...exerciseDescriptions };
         Object.keys(newDescriptions).forEach(key => {
-          if (key.startsWith(`${category}-`)) delete newDescriptions[key];
+          if (deletedIds.has(key)) delete newDescriptions[key];
         });
         setExerciseDescriptions(newDescriptions);
+        setExerciseGoals(prev => {
+          const next = { ...prev };
+          Object.keys(next).forEach(key => {
+            if (deletedIds.has(key)) delete next[key];
+          });
+          return next;
+        });
+        setWeeklySchedule(prev => Object.fromEntries(
+          Object.entries(prev).map(([day, exs]) => [day, exs.filter(e => !deletedIds.has(e.exerciseId))])
+        ));
       },
     });
   };
 
-  const startEditExercise = (category: string, exerciseName: string) => {
-    setEditingExercise({ category, name: exerciseName });
-    setEditExerciseName(exerciseName);
-    setEditExerciseDescription(exerciseDescriptions[`${category}-${exerciseName}`] || '');
-    const eg = exerciseGoals[`${category}-${exerciseName}`];
+  const startEditExercise = (category: string, exercise: Exercise) => {
+    setEditingExercise({ category, id: exercise.id });
+    setEditExerciseName(exercise.name);
+    setEditExerciseDescription(exerciseDescriptions[exercise.id] || '');
+    const eg = exerciseGoals[exercise.id];
     setEditExerciseNoGoal(eg?.disabled ?? false);
     setEditExerciseOverride(!eg?.disabled && (eg?.override ?? false));
     setEditExerciseOverrideRequired(eg?.disabled ? (goalSettings[category]?.required ?? 3) : (eg?.required ?? goalSettings[category]?.required ?? 3));
@@ -200,68 +185,61 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const saveEditExercise = () => {
     if (editingExercise) {
-      const { category, name: oldName } = editingExercise;
-      const newName = editExerciseName.trim() || oldName;
-      if (newName !== oldName && !exercises[category].includes(newName)) {
-        const newExercises = { ...exercises };
-        const index = newExercises[category].indexOf(oldName);
-        if (index !== -1) newExercises[category][index] = newName;
-        setExercises(newExercises);
-        const newCompletions: Record<string, boolean> = {};
-        Object.keys(completions).forEach(key => {
-          if (key.startsWith(`${category}-${oldName}-`)) {
-            newCompletions[key.replace(`${category}-${oldName}-`, `${category}-${newName}-`)] = completions[key];
-          } else {
-            newCompletions[key] = completions[key];
-          }
+      const { category, id } = editingExercise;
+      const newName = editExerciseName.trim();
+      // Renaming/re-categorizing an exercise no longer touches completions/descriptions/goals at
+      // all — they're keyed by this stable id, which never changes.
+      if (newName) {
+        setExercises(prev => {
+          const list = prev[category];
+          const duplicate = list.some(ex => ex.id !== id && ex.name === newName);
+          if (duplicate) return prev;
+          return { ...prev, [category]: list.map(ex => (ex.id === id ? { ...ex, name: newName } : ex)) };
         });
-        setCompletions(newCompletions);
       }
       const newDescriptions = { ...exerciseDescriptions };
-      const oldKey = `${category}-${oldName}`;
-      const newKey = `${category}-${newName}`;
-      if (oldKey !== newKey) delete newDescriptions[oldKey];
       if (editExerciseDescription.trim()) {
-        newDescriptions[newKey] = editExerciseDescription.trim();
+        newDescriptions[id] = editExerciseDescription.trim();
       } else {
-        delete newDescriptions[newKey];
+        delete newDescriptions[id];
       }
       setExerciseDescriptions(newDescriptions);
+      setExerciseGoals(prev => {
+        const next = { ...prev };
+        const today = new Date().toISOString().split('T')[0];
+        if (editExerciseNoGoal) next[id] = { override: true, required: editExerciseOverrideRequired, disabled: true };
+        else if (editExerciseOverride) next[id] = { override: true, required: editExerciseOverrideRequired, createdAt: next[id]?.createdAt ?? today };
+        else delete next[id];
+        return next;
+      });
     }
-    const oldKey = `${editingExercise!.category}-${editingExercise!.name}`;
-    const newKey = `${editingExercise!.category}-${editExerciseName.trim() || editingExercise!.name}`;
-    setExerciseGoals(prev => {
-      const next = { ...prev };
-      const today = new Date().toISOString().split('T')[0];
-      if (oldKey !== newKey) delete next[oldKey];
-      if (editExerciseNoGoal) next[newKey] = { override: true, required: editExerciseOverrideRequired, disabled: true };
-      else if (editExerciseOverride) next[newKey] = { override: true, required: editExerciseOverrideRequired, createdAt: next[newKey]?.createdAt ?? today };
-      else delete next[newKey];
-      return next;
-    });
     setEditingExercise(null);
     setEditExerciseName('');
     setEditExerciseDescription('');
   };
 
-  const deleteExercise = (category: string, exerciseName: string) => {
+  const deleteExercise = (category: string, exercise: Exercise) => {
     setConfirmDialog({
-      message: `Delete "${exerciseName}"?`,
+      message: `Delete "${exercise.name}"?`,
       onConfirm: () => {
-        setExercises(prev => ({ ...prev, [category]: prev[category].filter(ex => ex !== exerciseName) }));
+        const id = exercise.id;
+        setExercises(prev => ({ ...prev, [category]: prev[category].filter(ex => ex.id !== id) }));
         const newCompletions = { ...completions };
         Object.keys(newCompletions).forEach(key => {
-          if (key.includes(`${category}-${exerciseName}-`)) delete newCompletions[key];
+          if (key.slice(0, -11) === id) delete newCompletions[key];
         });
         setCompletions(newCompletions);
         const newDescriptions = { ...exerciseDescriptions };
-        delete newDescriptions[`${category}-${exerciseName}`];
+        delete newDescriptions[id];
         setExerciseDescriptions(newDescriptions);
         setExerciseGoals(prev => {
           const next = { ...prev };
-          delete next[`${category}-${exerciseName}`];
+          delete next[id];
           return next;
         });
+        setWeeklySchedule(prev => Object.fromEntries(
+          Object.entries(prev).map(([day, exs]) => [day, exs.filter(e => e.exerciseId !== id)])
+        ));
       },
     });
   };
@@ -297,7 +275,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       onConfirm: () => {
         localStorage.clear();
         setCompletions({});
-        setExercises(DEFAULT_EXERCISES);
+        setExercises(createDefaultExercises());
         setExerciseDescriptions({});
       },
     });
@@ -395,9 +373,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                         <Typography sx={{ color: 'text.secondary', fontStyle: 'italic' }}>No exercises</Typography>
                       ) : (
                         exercises[category].map((exercise, index) => (
-                          <Box key={exercise} draggable onDragStart={(e) => handleDragStart(e, category, index)} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, category, index)} sx={{ display: 'flex', alignItems: editingExercise?.category === category && editingExercise?.name === exercise ? 'flex-start' : 'center', gap: 1, p: 1, borderRadius: 1, cursor: 'grab', '&:hover': { backgroundColor: 'action.hover' } }}>
-                            <DragIndicatorIcon sx={{ color: 'text.secondary', marginTop: editingExercise?.category === category && editingExercise?.name === exercise ? 6 : 0, fontSize: 16 }} />
-                            {editingExercise?.category === category && editingExercise?.name === exercise ? (
+                          <Box key={exercise.id} draggable onDragStart={(e) => handleDragStart(e, category, index)} onDragOver={handleDragOver} onDrop={(e) => handleDrop(e, category, index)} sx={{ display: 'flex', alignItems: editingExercise?.category === category && editingExercise?.id === exercise.id ? 'flex-start' : 'center', gap: 1, p: 1, borderRadius: 1, cursor: 'grab', '&:hover': { backgroundColor: 'action.hover' } }}>
+                            <DragIndicatorIcon sx={{ color: 'text.secondary', marginTop: editingExercise?.category === category && editingExercise?.id === exercise.id ? 6 : 0, fontSize: 16 }} />
+                            {editingExercise?.category === category && editingExercise?.id === exercise.id ? (
                               <>
                                 <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 0.75 }}>
                                   <TextField value={editExerciseName} onChange={(e) => setEditExerciseName(e.target.value)} size="small" placeholder="Exercise name" fullWidth />
@@ -447,14 +425,14 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
                             ) : (
                               <>
                                 <Box sx={{ flex: 1 }}>
-                                  <Typography>{exercise}</Typography>
-                                  {exerciseDescriptions[`${category}-${exercise}`] && (
+                                  <Typography>{exercise.name}</Typography>
+                                  {exerciseDescriptions[exercise.id] && (
                                     <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', fontStyle: 'italic' }}>
-                                      {exerciseDescriptions[`${category}-${exercise}`]}
+                                      {exerciseDescriptions[exercise.id]}
                                     </Typography>
                                   )}
                                   {goalSettings[category]?.enabled && (() => {
-                                    const eg = exerciseGoals[`${category}-${exercise}`];
+                                    const eg = exerciseGoals[exercise.id];
                                     if (eg?.disabled) return <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>No goal</Typography>;
                                     if (eg?.override) return <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>Goal: {eg.required} / week</Typography>;
                                     return <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block', mt: 0.5 }}>Goal: {goalSettings[category].required} / week</Typography>;

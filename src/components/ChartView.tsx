@@ -5,9 +5,10 @@ import Typography from '@mui/material/Typography';
 import { useTheme } from '@mui/material/styles';
 import { months, formatDateKey, formatRange, generateWeekDates } from '../utils/dateUtils';
 import { isCompleted as isCompletedUtil } from '../utils/completionUtils';
+import type { Exercise } from '../types';
 
 interface ChartViewProps {
-  exercises: Record<string, string[]>;
+  exercises: Record<string, Exercise[]>;
   completions: Record<string, boolean>;
   chartMode: 'weekly' | 'monthly';
   weekStartDate: Date;
@@ -33,7 +34,7 @@ const ChartView: React.FC<ChartViewProps> = ({
       label: category,
       data: dayDates.map(date => {
         const dateStr = formatDateKey(date);
-        return exercises[category].filter(ex => isCompletedUtil(completions, category, ex, dateStr)).length;
+        return exercises[category].filter(ex => isCompletedUtil(completions, ex.id, dateStr)).length;
       }),
       color: theme.palette.chartColors[idx % theme.palette.chartColors.length],
       curve: 'linear' as const,

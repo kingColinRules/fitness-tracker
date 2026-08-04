@@ -1,3 +1,5 @@
+import type { Exercise } from '../types';
+
 const FS_DB_NAME = 'exercise-tracker-fs';
 const FS_DB_VERSION = 1;
 const FS_STORE = 'handles';
@@ -41,11 +43,11 @@ export async function storeHandle(handle: FileSystemFileHandle): Promise<void> {
 }
 
 export function generateExportJSON(
-  exercises: Record<string, string[]>,
+  exercises: Record<string, Exercise[]>,
   completions: Record<string, boolean>,
   goalSettings: Record<string, { enabled: boolean; required: number }>,
   exerciseDescriptions: Record<string, string>,
-  weeklySchedule: Record<string, { category: string; name: string }[]>,
+  weeklySchedule: Record<string, { exerciseId: string }[]>,
   exerciseGoals: Record<string, { override: boolean; required: number; disabled?: boolean }>,
   preferences: {
     darkMode: boolean;
@@ -60,7 +62,7 @@ export function generateExportJSON(
   },
 ): string {
   return JSON.stringify(
-    { version: 1, exportedAt: new Date().toISOString(), exercises, goalSettings, exerciseGoals, completions, exerciseDescriptions, weeklySchedule, preferences },
+    { version: 2, exportedAt: new Date().toISOString(), exercises, goalSettings, exerciseGoals, completions, exerciseDescriptions, weeklySchedule, preferences },
     null,
     2,
   );

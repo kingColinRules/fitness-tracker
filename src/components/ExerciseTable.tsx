@@ -44,13 +44,13 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
   const isDark = theme.palette.mode === 'dark';
 
   const [popoverAnchor, setPopoverAnchor] = useState<HTMLElement | null>(null);
-  const [popoverExercise, setPopoverExercise] = useState<{ category: string; name: string } | null>(null);
+  const [popoverExercise, setPopoverExercise] = useState<{ id: string; name: string } | null>(null);
   const [popoverDesc, setPopoverDesc] = useState('');
 
-  const openDescriptionPopover = (e: React.MouseEvent<HTMLElement>, category: string, exercise: string) => {
+  const openDescriptionPopover = (e: React.MouseEvent<HTMLElement>, id: string, name: string) => {
     setPopoverAnchor(e.currentTarget);
-    setPopoverExercise({ category, name: exercise });
-    setPopoverDesc(exerciseDescriptions[`${category}-${exercise}`] || '');
+    setPopoverExercise({ id, name });
+    setPopoverDesc(exerciseDescriptions[id] || '');
   };
 
   const closePopover = () => {
@@ -64,17 +64,17 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
   const rowBg = theme.palette.background.paper;
 
 
-  const isCompleted = (category: string, exercise: string, dateStr: string): boolean =>
-    isCompletedUtil(completions, category, exercise, dateStr);
+  const isCompleted = (exerciseId: string, dateStr: string): boolean =>
+    isCompletedUtil(completions, exerciseId, dateStr);
 
-  const calculateWeeklyCount = (category: string, exercise: string): number =>
+  const calculateWeeklyCount = (exerciseId: string): number =>
     tableDates.filter(date =>
-      !isFutureDate(date) && isCompleted(category, exercise, formatDateKey(date))
+      !isFutureDate(date) && isCompleted(exerciseId, formatDateKey(date))
     ).length;
 
   // For confetti: always count within the current ISO week, not the full month range.
-  const calculateCurrentWeekCount = (category: string, exercise: string): number => {
-    if (chartMode !== 'monthly') return calculateWeeklyCount(category, exercise);
+  const calculateCurrentWeekCount = (exerciseId: string): number => {
+    if (chartMode !== 'monthly') return calculateWeeklyCount(exerciseId);
     const today = new Date();
     const startOffset = (today.getDay() - weekStartDay + 7) % 7;
     const weekStart = new Date(today);
@@ -83,7 +83,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
     return tableDates.filter(date => {
       const d = new Date(date);
       d.setHours(0, 0, 0, 0);
-      return d >= weekStart && !isFutureDate(date) && isCompleted(category, exercise, formatDateKey(date));
+      return d >= weekStart && !isFutureDate(date) && isCompleted(exerciseId, formatDateKey(date));
     }).length;
   };
 
@@ -126,22 +126,22 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                 <TableCell colSpan={tableDates.length + 1} sx={{ backgroundColor: categoryBg }} />
               </TableRow>
               {exerciseList.map((exercise) => {
-                const weeklyCount = calculateWeeklyCount(category, exercise);
-                const currentWeekCount = calculateCurrentWeekCount(category, exercise);
-                const eg = exerciseGoals[`${category}-${exercise}`];
+                const weeklyCount = calculateWeeklyCount(exercise.id);
+                const currentWeekCount = calculateCurrentWeekCount(exercise.id);
+                const eg = exerciseGoals[exercise.id];
                 const showProgress = goalSettings[category]?.enabled && !eg?.disabled;
                 const weeklyRequired = (eg?.override && !eg?.disabled) ? eg.required : (goalSettings[category]?.required || 3);
                 return (
-                  <TableRow key={exercise}>
+                  <TableRow key={exercise.id}>
                     <TableCell sx={{ fontWeight: 500, position: 'sticky', left: 0, zIndex: 70, backgroundColor: rowBg, color: 'text.primary', maxWidth: chartMode === 'weekly' ? 200 : 130, pr: 0.5 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exercise}</Box>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{exercise.name}</Box>
                       {showDescriptionsInLog && (
                         <Typography
                           variant="caption"
-                          onClick={(e) => openDescriptionPopover(e, category, exercise)}
-                          sx={{ color: exerciseDescriptions[`${category}-${exercise}`] ? 'text.secondary' : 'text.disabled', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3, mt: 0.25, cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
+                          onClick={(e) => openDescriptionPopover(e, exercise.id, exercise.name)}
+                          sx={{ color: exerciseDescriptions[exercise.id] ? 'text.secondary' : 'text.disabled', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3, mt: 0.25, cursor: 'pointer', '&:hover': { color: 'primary.main' } }}
                         >
-                          {exerciseDescriptions[`${category}-${exercise}`] || 'Add description…'}
+                          {exerciseDescriptions[exercise.id] || 'Add description…'}
                         </Typography>
                       )}
                     </TableCell>
@@ -150,7 +150,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                         chartMode === 'monthly' ? (
                           <Box sx={{ display: 'flex', gap: '3px', justifyContent: 'center', flexWrap: 'wrap' }}>
                             {monthlyWeekGroups.map((week, wi) => {
-                              const wCount = week.filter(d => !isFutureDate(d) && isCompleted(category, exercise, formatDateKey(d))).length;
+                              const wCount = week.filter(d => !isFutureDate(d) && isCompleted(exercise.id, formatDateKey(d))).length;
                               const allFuture = week.every(d => isFutureDate(d));
                               const met = wCount >= weeklyRequired;
                               const partial = wCount > 0 && !met;
@@ -182,10 +182,10 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                     </TableCell>
                     {tableDates.map(date => {
                       const dateStr = formatDateKey(date);
-                      const completed = isCompleted(category, exercise, dateStr);
+                      const completed = isCompleted(exercise.id, dateStr);
                       const isFuture = isFutureDate(date);
                       const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][date.getDay()];
-                      const scheduled = (weeklySchedule[dayName] ?? []).some(e => e.category === category && e.name === exercise);
+                      const scheduled = (weeklySchedule[dayName] ?? []).some(e => e.exerciseId === exercise.id);
                       return (
                         <TableCell key={date.toISOString()} data-date-cell align="center" sx={{ borderColor: 'divider', px: chartMode === 'monthly' ? 0.25 : 0.5, py: 0.5, ...(chartMode === 'monthly' && date.getDay() === weekStartDay && { borderLeft: `2px solid ${theme.palette.divider}`, pl: 1 }), ...(chartMode === 'monthly' && date.getDay() === (weekStartDay + 6) % 7 && { pr: 1 }) }}>
                           <Tooltip title={scheduled && !completed && !isFuture && showScheduleInLog ? (isToday(date) ? 'Scheduled for today' : 'Scheduled') : ''} placement="top" arrow>
@@ -204,9 +204,9 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
                                   zIndex: 9999,
                                 });
                               }
-                              toggleCompletion(category, exercise, dateStr);
+                              toggleCompletion(exercise.id, dateStr);
                             }}
-                            aria-label={`${exercise}, ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
+                            aria-label={`${exercise.name}, ${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`}
                             aria-pressed={!isFuture && completed}
                             disabled={isFuture}
                             fullWidth
@@ -266,7 +266,7 @@ const ExerciseTable: React.FC<ExerciseTableProps> = ({
         />
         <Box sx={{ display: 'flex', gap: 1, mt: 1.5, justifyContent: 'flex-end' }}>
           <Button size="small" onClick={closePopover}>Cancel</Button>
-          <Button size="small" variant="contained" onClick={() => { if (popoverExercise) updateExerciseDescription(popoverExercise.category, popoverExercise.name, popoverDesc.trim()); closePopover(); }}>Save</Button>
+          <Button size="small" variant="contained" onClick={() => { if (popoverExercise) updateExerciseDescription(popoverExercise.id, popoverDesc.trim()); closePopover(); }}>Save</Button>
         </Box>
       </Box>
     </Popover>

@@ -13,6 +13,7 @@ import KeyboardArrowDown from '@mui/icons-material/KeyboardArrowDown';
 import KeyboardArrowUp from '@mui/icons-material/KeyboardArrowUp';
 import { formatDateKey, localDateStr, generateWeekDates, startOfWeek, months } from '../utils/dateUtils';
 import { useAppStore } from '../store';
+import type { Exercise } from '../types';
 
 interface StatsViewProps {
   weekStartDate: Date;
@@ -24,11 +25,11 @@ interface StatsViewProps {
 
 const countDay = (
   completions: Record<string, boolean>,
-  exercises: Record<string, string[]>,
+  exercises: Record<string, Exercise[]>,
   dateStr: string,
 ): number =>
   Object.keys(exercises).reduce(
-    (sum, cat) => sum + exercises[cat].filter(ex => completions[`${cat}-${ex}-${dateStr}`]).length,
+    (sum, cat) => sum + exercises[cat].filter(ex => completions[`${ex.id}-${dateStr}`]).length,
     0,
   );
 
@@ -197,7 +198,7 @@ const StatsView: React.FC<StatsViewProps> = ({
       categories.map((cat) => ({
         data: periodDates.map(d => {
           const dateStr = formatDateKey(d);
-          return exercises[cat].filter(ex => completions[`${cat}-${ex}-${dateStr}`]).length;
+          return exercises[cat].filter(ex => completions[`${ex.id}-${dateStr}`]).length;
         }),
         label: cat,
         stack: 'total',
@@ -210,8 +211,8 @@ const StatsView: React.FC<StatsViewProps> = ({
     const enabledCats = Object.entries(goalSettings).filter(([cat, g]) => g.enabled && exercises[cat]);
     if (enabledCats.length === 0) return { gaugeValue: 0, gaugeNote: '', goalsMet: 0, goalsTotal: 0, goalsSparkData: [] };
 
-    const getGoal = (cat: string, ex: string, catRequired: number, periodStart: string) => {
-      const eg = exerciseGoals[`${cat}-${ex}`];
+    const getGoal = (cat: string, ex: Exercise, catRequired: number, periodStart: string) => {
+      const eg = exerciseGoals[ex.id];
       if (eg?.disabled) return null;
       if (eg?.override) {
         if (eg.createdAt && eg.createdAt > periodStart) return null;
@@ -231,7 +232,7 @@ const StatsView: React.FC<StatsViewProps> = ({
           const required = getGoal(cat, ex, goal.required, periodStart);
           if (required === null) return;
           const count = weekDates.reduce((sum, d) =>
-            sum + (completions[`${cat}-${ex}-${formatDateKey(d)}`] ? 1 : 0), 0);
+            sum + (completions[`${ex.id}-${formatDateKey(d)}`] ? 1 : 0), 0);
           total++;
           if (count >= required) met++;
         });
@@ -247,7 +248,7 @@ const StatsView: React.FC<StatsViewProps> = ({
               const required = getGoal(cat, ex, goal.required, periodStart);
               if (required === null) return;
               const count = daysUpTo.reduce((sum, d) =>
-                sum + (completions[`${cat}-${ex}-${formatDateKey(d)}`] ? 1 : 0), 0);
+                sum + (completions[`${ex.id}-${formatDateKey(d)}`] ? 1 : 0), 0);
               if (count >= required) dayMet++;
             });
           });
@@ -271,15 +272,14 @@ const StatsView: React.FC<StatsViewProps> = ({
         const daysInMonth = wDates.filter(d => d.getMonth() === selectedMonth && d.getFullYear() === selectedYear).length;
         if (daysInMonth < 4) return;
         const weekPeriodStart = formatDateKey(weekStart);
-        let weekMet = 0;
         enabledCats.forEach(([cat, goal]) => {
           exercises[cat].forEach(ex => {
             const required = getGoal(cat, ex, goal.required, weekPeriodStart);
             if (required === null) return;
             const count = wDates.reduce((sum, d) =>
-              sum + (completions[`${cat}-${ex}-${formatDateKey(d)}`] ? 1 : 0), 0);
+              sum + (completions[`${ex.id}-${formatDateKey(d)}`] ? 1 : 0), 0);
             total++;
-            if (count >= required) { met++; weekMet++; }
+            if (count >= required) met++;
           });
         });
         spark.push(met);
@@ -300,7 +300,7 @@ const StatsView: React.FC<StatsViewProps> = ({
       categories.map(cat =>
         periodDates.reduce((sum, d) => {
           const dateStr = formatDateKey(d);
-          return sum + exercises[cat].filter(ex => completions[`${cat}-${ex}-${dateStr}`]).length;
+          return sum + exercises[cat].filter(ex => completions[`${ex.id}-${dateStr}`]).length;
         }, 0),
       ),
     [categories, periodDates, exercises, completions],
@@ -317,12 +317,12 @@ const StatsView: React.FC<StatsViewProps> = ({
       const catGoal = goalSettings[cat];
       return exercises[cat].map(ex => {
         const completed = periodDates.reduce(
-          (sum, d) => sum + (completions[`${cat}-${ex}-${formatDateKey(d)}`] ? 1 : 0),
+          (sum, d) => sum + (completions[`${ex.id}-${formatDateKey(d)}`] ? 1 : 0),
           0
         );
         let goal = periodDates.length;
         if (catGoal?.enabled && !(catGoal.createdAt && catGoal.createdAt > periodStart)) {
-          const eg = exerciseGoals[`${cat}-${ex}`];
+          const eg = exerciseGoals[ex.id];
           if (eg?.disabled) {
             goal = 0;
           } else if (eg?.override && !(eg.createdAt && eg.createdAt > periodStart)) {
@@ -331,7 +331,7 @@ const StatsView: React.FC<StatsViewProps> = ({
             goal = goalFor(catGoal.required);
           }
         }
-        return { name: ex, completed, goal };
+        return { name: ex.name, completed, goal };
       });
     });
   }, [categories, exercises, completions, periodDates, goalSettings, exerciseGoals, isWeekly, weekDates, selectedYear, selectedMonth, weekStartDay]);
@@ -348,7 +348,7 @@ const StatsView: React.FC<StatsViewProps> = ({
       const catGoal = goalSettings[cat];
       if (!catGoal?.enabled || (catGoal.createdAt && catGoal.createdAt > periodStart)) return exercises[cat].length * periodDates.length;
       return exercises[cat].reduce((sum, ex) => {
-        const eg = exerciseGoals[`${cat}-${ex}`];
+        const eg = exerciseGoals[ex.id];
         if (eg?.disabled) return sum;
         if (eg?.override) {
           if (eg.createdAt && eg.createdAt > periodStart) return sum;
@@ -357,7 +357,7 @@ const StatsView: React.FC<StatsViewProps> = ({
         return sum + goalFor(catGoal.required);
       }, 0);
     });
-  }, [categories, goalSettings, exerciseGoals, exercises, isWeekly, selectedYear, selectedMonth, weekStartDay, periodDates]);
+  }, [categories, goalSettings, exerciseGoals, exercises, isWeekly, selectedYear, selectedMonth, weekStartDay, periodDates, weekDates]);
 
   const totalGoalTarget = categoryGoalTotals.reduce((a, b) => a + b, 0);
 
@@ -378,7 +378,7 @@ const StatsView: React.FC<StatsViewProps> = ({
         if (!goal.enabled || !exercises[cat]) return;
         if (goal.createdAt && goal.createdAt > periodStart) return;
         exercises[cat].forEach(ex => {
-          const eg = exerciseGoals[`${cat}-${ex}`];
+          const eg = exerciseGoals[ex.id];
           if (eg?.disabled) return;
           if (eg?.override) {
             if (eg.createdAt && eg.createdAt > periodStart) return;
@@ -421,7 +421,7 @@ const StatsView: React.FC<StatsViewProps> = ({
   const [expandedCats, setExpandedCats] = useState<Set<string>>(new Set());
   const toggleCat = (cat: string) => setExpandedCats(prev => {
     const next = new Set(prev);
-    next.has(cat) ? next.delete(cat) : next.add(cat);
+    if (next.has(cat)) next.delete(cat); else next.add(cat);
     return next;
   });
 

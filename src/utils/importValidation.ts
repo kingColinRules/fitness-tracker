@@ -6,23 +6,9 @@ function isStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.every(item => typeof item === 'string');
 }
 
-export function validateImportData(parsed: unknown): { valid: true } | { valid: false; error: string } {
-  if (!isPlainObject(parsed)) return { valid: false, error: 'File must contain a JSON object.' };
+type ValidationResult = { valid: true } | { valid: false; error: string };
 
-  // Required fields
-  if (!('version' in parsed)) return { valid: false, error: 'Missing required field: version.' };
-  if (!('exercises' in parsed)) return { valid: false, error: 'Missing required field: exercises.' };
-  if (!('completions' in parsed)) return { valid: false, error: 'Missing required field: completions.' };
-
-  // exercises: Record<string, string[]>
-  const exercises = parsed.exercises;
-  if (!isPlainObject(exercises))
-    return { valid: false, error: 'Field "exercises" must be an object.' };
-  for (const [cat, exList] of Object.entries(exercises)) {
-    if (!isStringArray(exList))
-      return { valid: false, error: `exercises["${cat}"] must be an array of strings.` };
-  }
-
+function validateCommonFields(parsed: Record<string, unknown>): ValidationResult | null {
   // completions: Record<string, boolean>
   const completions = parsed.completions;
   if (!isPlainObject(completions))
@@ -55,22 +41,6 @@ export function validateImportData(parsed: unknown): { valid: true } | { valid: 
     for (const [key, val] of Object.entries(ed)) {
       if (typeof val !== 'string')
         return { valid: false, error: `exerciseDescriptions["${key}"] must be a string.` };
-    }
-  }
-
-  // weeklySchedule (optional): Record<string, { category: string; name: string }[]>
-  if ('weeklySchedule' in parsed) {
-    const ws = parsed.weeklySchedule;
-    if (!isPlainObject(ws))
-      return { valid: false, error: 'Field "weeklySchedule" must be an object.' };
-    for (const [day, items] of Object.entries(ws)) {
-      if (!Array.isArray(items))
-        return { valid: false, error: `weeklySchedule["${day}"] must be an array.` };
-      for (let i = 0; i < items.length; i++) {
-        const item = items[i];
-        if (!isPlainObject(item) || typeof item.category !== 'string' || typeof item.name !== 'string')
-          return { valid: false, error: `weeklySchedule["${day}"][${i}] must have string "category" and "name".` };
-      }
     }
   }
 
@@ -109,5 +79,90 @@ export function validateImportData(parsed: unknown): { valid: true } | { valid: 
       return { valid: false, error: 'preferences.seenBadges must be an array of strings.' };
   }
 
+  return null;
+}
+
+// Frozen forever — validates the pre-id-migration export shape (`exercises` as plain name strings,
+// `weeklySchedule` entries as `{category, name}`). A file exported before the stable-id migration
+// can be imported at any point in the future, so this validator's shape checks must never change.
+function validateLegacyImportData(parsed: Record<string, unknown>): ValidationResult {
+  if (!('exercises' in parsed)) return { valid: false, error: 'Missing required field: exercises.' };
+  if (!('completions' in parsed)) return { valid: false, error: 'Missing required field: completions.' };
+
+  const exercises = parsed.exercises;
+  if (!isPlainObject(exercises))
+    return { valid: false, error: 'Field "exercises" must be an object.' };
+  for (const [cat, exList] of Object.entries(exercises)) {
+    if (!isStringArray(exList))
+      return { valid: false, error: `exercises["${cat}"] must be an array of strings.` };
+  }
+
+  const common = validateCommonFields(parsed);
+  if (common) return common;
+
+  if ('weeklySchedule' in parsed) {
+    const ws = parsed.weeklySchedule;
+    if (!isPlainObject(ws))
+      return { valid: false, error: 'Field "weeklySchedule" must be an object.' };
+    for (const [day, items] of Object.entries(ws)) {
+      if (!Array.isArray(items))
+        return { valid: false, error: `weeklySchedule["${day}"] must be an array.` };
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (!isPlainObject(item) || typeof item.category !== 'string' || typeof item.name !== 'string')
+          return { valid: false, error: `weeklySchedule["${day}"][${i}] must have string "category" and "name".` };
+      }
+    }
+  }
+
   return { valid: true };
+}
+
+// Validates the current (post-id-migration) export shape: `exercises` as `{id, name}[]`,
+// `weeklySchedule` entries as `{exerciseId}`.
+export function validateCurrentImportData(parsed: Record<string, unknown>): ValidationResult {
+  if (!('exercises' in parsed)) return { valid: false, error: 'Missing required field: exercises.' };
+  if (!('completions' in parsed)) return { valid: false, error: 'Missing required field: completions.' };
+
+  const exercises = parsed.exercises;
+  if (!isPlainObject(exercises))
+    return { valid: false, error: 'Field "exercises" must be an object.' };
+  for (const [cat, exList] of Object.entries(exercises)) {
+    if (!Array.isArray(exList))
+      return { valid: false, error: `exercises["${cat}"] must be an array.` };
+    for (let i = 0; i < exList.length; i++) {
+      const ex = exList[i];
+      if (!isPlainObject(ex) || typeof ex.id !== 'string' || typeof ex.name !== 'string')
+        return { valid: false, error: `exercises["${cat}"][${i}] must have string "id" and "name".` };
+    }
+  }
+
+  const common = validateCommonFields(parsed);
+  if (common) return common;
+
+  if ('weeklySchedule' in parsed) {
+    const ws = parsed.weeklySchedule;
+    if (!isPlainObject(ws))
+      return { valid: false, error: 'Field "weeklySchedule" must be an object.' };
+    for (const [day, items] of Object.entries(ws)) {
+      if (!Array.isArray(items))
+        return { valid: false, error: `weeklySchedule["${day}"] must be an array.` };
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (!isPlainObject(item) || typeof item.exerciseId !== 'string')
+          return { valid: false, error: `weeklySchedule["${day}"][${i}] must have a string "exerciseId".` };
+      }
+    }
+  }
+
+  return { valid: true };
+}
+
+export function validateImportData(parsed: unknown): ValidationResult {
+  if (!isPlainObject(parsed)) return { valid: false, error: 'File must contain a JSON object.' };
+  if (!('version' in parsed)) return { valid: false, error: 'Missing required field: version.' };
+  const version = parsed.version;
+  if (version === 1) return validateLegacyImportData(parsed);
+  if (version === 2) return validateCurrentImportData(parsed);
+  return { valid: false, error: `Unsupported version: ${String(version)}.` };
 }

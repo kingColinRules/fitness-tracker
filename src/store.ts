@@ -1,5 +1,9 @@
 import { create } from 'zustand';
-import { DEFAULT_EXERCISES } from './constants';
+import { createDefaultExercises } from './constants';
+import type { Exercise, ExerciseGoals, GoalSettings, WeeklySchedule } from './types';
+import { migrateExerciseData } from './utils/migration';
+
+export type { Exercise, ExerciseGoals, GoalSettings, WeeklyScheduleEntry, WeeklySchedule } from './types';
 
 type Updater<T> = T | ((prev: T) => T);
 
@@ -25,10 +29,40 @@ function readSetting<T>(key: string, fallback: T): T {
   return fallback;
 }
 
-export type ExerciseGoals = Record<string, { override: boolean; required: number; disabled?: boolean; createdAt?: string }>;
-export type GoalSettings = Record<string, { enabled: boolean; required: number; createdAt?: string }>;
-export type WeeklyScheduleEntry = { category: string; name: string };
-export type WeeklySchedule = Record<string, WeeklyScheduleEntry[]>;
+// True if the stored exercise list is still in the pre-id shape (plain name strings rather than
+// {id, name} objects) — checked against the first non-empty category, since an empty list carries
+// no shape information either way.
+function looksLegacy(exercises: Record<string, unknown> | null): boolean {
+  if (!exercises) return false;
+  for (const arr of Object.values(exercises)) {
+    if (Array.isArray(arr) && arr.length > 0) return typeof arr[0] === 'string';
+  }
+  return false;
+}
+
+function runBootMigrationIfNeeded(): void {
+  try {
+    if (localStorage.getItem('schemaVersion') === '2') return;
+    const rawExercises = readLS<Record<string, unknown>>('exerciseList');
+    if (looksLegacy(rawExercises)) {
+      const migrated = migrateExerciseData({
+        exercises: rawExercises as Record<string, string[]>,
+        completions: readLS('exerciseCompletions') ?? {},
+        exerciseDescriptions: readLS('exerciseDescriptions') ?? {},
+        exerciseGoals: readLS('exerciseGoals') ?? {},
+        weeklySchedule: readLS('weeklySchedule') ?? {},
+      });
+      localStorage.setItem('exerciseList', JSON.stringify(migrated.exercises));
+      localStorage.setItem('exerciseCompletions', JSON.stringify(migrated.completions));
+      localStorage.setItem('exerciseDescriptions', JSON.stringify(migrated.exerciseDescriptions));
+      localStorage.setItem('exerciseGoals', JSON.stringify(migrated.exerciseGoals));
+      localStorage.setItem('weeklySchedule', JSON.stringify(migrated.weeklySchedule));
+    }
+    localStorage.setItem('schemaVersion', '2');
+  } catch (e) { console.error('Migration error:', e); } // leave schemaVersion unset -> safe retry next launch
+}
+
+runBootMigrationIfNeeded();
 
 const DEFAULT_GOAL_SETTINGS: GoalSettings = {
   Weight: { enabled: true, required: 3 },
@@ -38,7 +72,7 @@ const DEFAULT_GOAL_SETTINGS: GoalSettings = {
 
 interface AppState {
   // Data
-  exercises: Record<string, string[]>;
+  exercises: Record<string, Exercise[]>;
   completions: Record<string, boolean>;
   exerciseDescriptions: Record<string, string>;
   exerciseGoals: ExerciseGoals;
@@ -61,7 +95,7 @@ interface AppState {
   seenBadges: string[];
 
   // Setters
-  setExercises: (v: Updater<Record<string, string[]>>) => void;
+  setExercises: (v: Updater<Record<string, Exercise[]>>) => void;
   setCompletions: (v: Updater<Record<string, boolean>>) => void;
   setExerciseDescriptions: (v: Updater<Record<string, string>>) => void;
   setExerciseGoals: (v: Updater<ExerciseGoals>) => void;
@@ -80,8 +114,8 @@ interface AppState {
   setSeenBadges: (names: string[]) => void;
 
   // Actions
-  toggleCompletion: (category: string, exercise: string, dateStr: string) => void;
-  updateExerciseDescription: (category: string, exercise: string, description: string) => void;
+  toggleCompletion: (exerciseId: string, dateStr: string) => void;
+  updateExerciseDescription: (exerciseId: string, description: string) => void;
 }
 
 const initHasUnsavedExport = (): boolean => {
@@ -95,7 +129,7 @@ const initHasUnsavedExport = (): boolean => {
 };
 
 export const useAppStore = create<AppState>()((set) => ({
-  exercises: readLS<Record<string, string[]>>('exerciseList') ?? DEFAULT_EXERCISES,
+  exercises: readLS<Record<string, Exercise[]>>('exerciseList') ?? createDefaultExercises(),
   weeklySchedule: readLS<WeeklySchedule>('weeklySchedule') ?? {},
   completions: readLS<Record<string, boolean>>('exerciseCompletions') ?? {},
   exerciseDescriptions: readLS<Record<string, string>>('exerciseDescriptions') ?? {},
@@ -131,17 +165,16 @@ export const useAppStore = create<AppState>()((set) => ({
   setHasUnsavedExport: (v) => set({ hasUnsavedExport: v }),
   setSeenBadges: (names) => set({ seenBadges: names }),
 
-  toggleCompletion: (category, exercise, dateStr) => {
-    const key = `${category}-${exercise}-${dateStr}`;
+  toggleCompletion: (exerciseId, dateStr) => {
+    const key = `${exerciseId}-${dateStr}`;
     set(s => ({ completions: { ...s.completions, [key]: !s.completions[key] }, hasUnsavedExport: true }));
   },
 
-  updateExerciseDescription: (category, exercise, description) => {
+  updateExerciseDescription: (exerciseId, description) => {
     set(s => {
-      const key = `${category}-${exercise}`;
       const next = { ...s.exerciseDescriptions };
-      if (description) next[key] = description;
-      else delete next[key];
+      if (description) next[exerciseId] = description;
+      else delete next[exerciseId];
       return { exerciseDescriptions: next, hasUnsavedExport: true };
     });
   },

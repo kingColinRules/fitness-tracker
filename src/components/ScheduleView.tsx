@@ -26,8 +26,12 @@ import SelfImprovementIcon from '@mui/icons-material/SelfImprovement';
 import AccessibilityNewIcon from '@mui/icons-material/AccessibilityNew';
 import { alpha, useTheme } from '@mui/material/styles';
 import { useAppStore } from '../store';
-import type { WeeklyScheduleEntry } from '../store';
+import type { WeeklyScheduleEntry, WeeklySchedule } from '../store';
+import type { Exercise } from '../types';
 import { formatDateKey } from '../utils/dateUtils';
+import { isCompleted as isCompletedUtil } from '../utils/completionUtils';
+import { buildExerciseIndex, sortByExerciseOrder, getRemainingForExercise } from '../utils/scheduleUtils';
+import type { ExerciseIndex } from '../utils/scheduleUtils';
 import { CHART_COLORS } from '../theme';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -44,11 +48,12 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
 
 const ExerciseChip: React.FC<{
   id: string;
-  exercise: WeeklyScheduleEntry;
+  name: string;
+  category: string;
   color: string;
   onRemove: () => void;
   overlay?: boolean;
-}> = ({ id, exercise, color, onRemove, overlay }) => {
+}> = ({ id, name, category, color, onRemove, overlay }) => {
   const theme = useTheme();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
@@ -63,14 +68,14 @@ const ExerciseChip: React.FC<{
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '2px', overflow: 'hidden' }}>
             <DragIndicatorIcon sx={{ fontSize: 11, opacity: 0.4, flexShrink: 0 }} />
             <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {exercise.name}
+              {name}
             </Box>
           </Box>
         }
         onDelete={overlay ? undefined : onRemove}
         icon={
           <Box sx={{ display: 'flex', alignItems: 'center', color }}>
-            {CATEGORY_ICONS[exercise.category] ?? null}
+            {CATEGORY_ICONS[category] ?? null}
           </Box>
         }
         sx={{
@@ -93,47 +98,45 @@ const ExerciseChip: React.FC<{
 };
 
 const ExercisePickerContent: React.FC<{
-  grouped: Record<string, string[]>;
+  grouped: Record<string, Exercise[]>;
   categoryColors: Record<string, string>;
-  getRemaining: (cat: string, name: string) => number | null;
-  onConfirm: (exs: { category: string; name: string }[]) => void;
+  getRemaining: (exerciseId: string) => number | null;
+  onConfirm: (exs: WeeklyScheduleEntry[]) => void;
 }> = ({ grouped, categoryColors, getRemaining, onConfirm }) => {
   const theme = useTheme();
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const toggleKey = (cat: string, name: string) => {
-    const key = `${cat}-${name}`;
+  const toggleId = (id: string) => {
     setSelected(prev => {
       const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   };
 
   const handleConfirm = () => {
-    const toAdd = Object.entries(grouped).flatMap(([cat, names]) =>
-      names.filter(name => selected.has(`${cat}-${name}`)).map(name => ({ category: cat, name }))
-    );
+    const toAdd = Object.values(grouped).flat()
+      .filter(ex => selected.has(ex.id))
+      .map(ex => ({ exerciseId: ex.id }));
     if (toAdd.length > 0) onConfirm(toAdd);
   };
 
   return (
     <Box sx={{ minWidth: 200, display: 'flex', flexDirection: 'column' }}>
       <Box sx={{ maxHeight: 280, overflowY: 'auto', py: 0.5 }}>
-        {Object.entries(grouped).map(([cat, names]) => {
+        {Object.entries(grouped).map(([cat, exs]) => {
           const color = categoryColors[cat] ?? theme.palette.text.secondary;
           return (
             <Box key={cat}>
               <Typography variant="labelXs" sx={{ px: 1.5, py: 0.5, display: 'block', color, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' }}>
                 {cat}
               </Typography>
-              {names.map(name => {
-                const key = `${cat}-${name}`;
-                const isSelected = selected.has(key);
+              {exs.map(ex => {
+                const isSelected = selected.has(ex.id);
                 return (
                   <Box
-                    key={name}
-                    onClick={() => toggleKey(cat, name)}
+                    key={ex.id}
+                    onClick={() => toggleId(ex.id)}
                     sx={{ px: 1, py: 0.25, cursor: 'pointer', '&:hover': { backgroundColor: 'action.hover' }, display: 'flex', alignItems: 'center', gap: 0.5 }}
                   >
                     <Checkbox
@@ -142,9 +145,9 @@ const ExercisePickerContent: React.FC<{
                       disableRipple
                       sx={{ p: 0.5, color, '&.Mui-checked': { color } }}
                     />
-                    <Typography variant="labelSm" sx={{ flex: 1 }}>{name}</Typography>
+                    <Typography variant="labelSm" sx={{ flex: 1 }}>{ex.name}</Typography>
                     {(() => {
-                      const rem = getRemaining(cat, name);
+                      const rem = getRemaining(ex.id);
                       if (rem === null) return null;
                       if (rem === 0) return <Box sx={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: 'success.main', flexShrink: 0 }} />;
                       return <Typography variant="labelXs" sx={{ color: alpha(color, 0.8), fontWeight: 700, flexShrink: 0 }}>+{rem}</Typography>;
@@ -185,37 +188,37 @@ const WeekColumn: React.FC<{
   day: string;
   dayIdx: number;
   exercises: WeeklyScheduleEntry[];
-  allExercises: Record<string, string[]>;
-  weeklySchedule: Record<string, WeeklyScheduleEntry[]>;
+  allExercises: Record<string, Exercise[]>;
+  weeklySchedule: WeeklySchedule;
+  exerciseIndex: ExerciseIndex;
   categoryColors: Record<string, string>;
   onRemove: (idx: number) => void;
   onAdd: (exs: WeeklyScheduleEntry[]) => void;
-}> = ({ day, dayIdx, exercises, allExercises, weeklySchedule, categoryColors, onRemove, onAdd }) => {
+}> = ({ day, dayIdx, exercises, allExercises, weeklySchedule, exerciseIndex, categoryColors, onRemove, onAdd }) => {
   const theme = useTheme();
   const { exerciseGoals, goalSettings } = useAppStore();
   const [pickerAnchor, setPickerAnchor] = useState<HTMLElement | null>(null);
 
-  const getRemaining = (cat: string, name: string): number | null => {
-    const eg = exerciseGoals[`${cat}-${name}`];
-    if (!goalSettings[cat]?.enabled || eg?.disabled) return null;
-    const required = (eg?.override && !eg?.disabled) ? eg.required : (goalSettings[cat]?.required ?? 3);
-    const scheduled = Object.values(weeklySchedule).flat().filter(e => e.category === cat && e.name === name).length;
-    return Math.max(0, required - scheduled);
-  };
+  // Filter out stale references (e.g. an imported file referencing an exercise deleted elsewhere)
+  // before sorting/rendering — see plan's "orphan handling at render time".
+  const visible = exercises.filter(e => exerciseIndex.has(e.exerciseId));
+
+  const getRemaining = (exerciseId: string): number | null =>
+    getRemainingForExercise(exerciseId, exerciseIndex, weeklySchedule, goalSettings, exerciseGoals);
+
   const isToday = dayIdx === TODAY_IDX;
-  const isRest = exercises.length === 0;
+  const isRest = visible.length === 0;
 
-  const itemIds = exercises.map(ex => `${day}::${ex.category}::${ex.name}`);
+  const itemIds = visible.map(ex => `${day}::${ex.exerciseId}`);
 
-  const grouped = Object.entries(allExercises).reduce<Record<string, string[]>>((acc, [cat, names]) => {
-    const avail = names.filter(name => !exercises.some(s => s.category === cat && s.name === name));
+  const scheduledIds = new Set(visible.map(e => e.exerciseId));
+  const grouped = Object.entries(allExercises).reduce<Record<string, Exercise[]>>((acc, [cat, exs]) => {
+    const avail = exs.filter(ex => !scheduledIds.has(ex.id));
     if (avail.length > 0) acc[cat] = avail;
     return acc;
   }, {});
 
-  const available = Object.entries(grouped).flatMap(([cat, names]) =>
-    names.map(name => ({ category: cat, name }))
-  );
+  const available = Object.values(grouped).flat();
 
   const handleClose = () => setPickerAnchor(null);
 
@@ -246,15 +249,19 @@ const WeekColumn: React.FC<{
             <Typography variant="labelSm" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>Rest day</Typography>
           </Box>
         ) : (
-          exercises.map((ex, i) => (
-            <ExerciseChip
-              key={`${ex.category}::${ex.name}`}
-              id={`${day}::${ex.category}::${ex.name}`}
-              exercise={ex}
-              color={categoryColors[ex.category] ?? theme.palette.text.secondary}
-              onRemove={() => onRemove(i)}
-            />
-          ))
+          visible.map((ex) => {
+            const info = exerciseIndex.get(ex.exerciseId)!;
+            return (
+              <ExerciseChip
+                key={ex.exerciseId}
+                id={`${day}::${ex.exerciseId}`}
+                name={info.name}
+                category={info.category}
+                color={categoryColors[info.category] ?? theme.palette.text.secondary}
+                onRemove={() => onRemove(exercises.findIndex(e => e.exerciseId === ex.exerciseId))}
+              />
+            );
+          })
         )}
       </DroppableList>
 
@@ -290,51 +297,52 @@ const WeekColumn: React.FC<{
 };
 
 const WeekView: React.FC<{
-  weeklySchedule: Record<string, WeeklyScheduleEntry[]>;
-  allExercises: Record<string, string[]>;
+  weeklySchedule: WeeklySchedule;
+  allExercises: Record<string, Exercise[]>;
+  exerciseIndex: ExerciseIndex;
   categoryColors: Record<string, string>;
   onRemove: (day: string, idx: number) => void;
   onAdd: (day: string, exs: WeeklyScheduleEntry[]) => void;
-  setWeeklySchedule: (v: ((prev: Record<string, WeeklyScheduleEntry[]>) => Record<string, WeeklyScheduleEntry[]>)) => void;
-}> = ({ weeklySchedule, allExercises, categoryColors, onRemove, onAdd, setWeeklySchedule }) => {
+  setWeeklySchedule: (v: ((prev: WeeklySchedule) => WeeklySchedule)) => void;
+}> = ({ weeklySchedule, allExercises, exerciseIndex, categoryColors, onRemove, onAdd, setWeeklySchedule }) => {
   const theme = useTheme();
-  const [activeItem, setActiveItem] = useState<{ exercise: WeeklyScheduleEntry; color: string } | null>(null);
+  const [activeItem, setActiveItem] = useState<{ name: string; category: string; color: string } | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const handleDragStart = ({ active }: DragStartEvent) => {
-    const [day, cat, name] = (active.id as string).split('::');
-    const exercise = (weeklySchedule[day] ?? []).find(e => e.category === cat && e.name === name);
-    if (exercise) setActiveItem({ exercise, color: categoryColors[exercise.category] ?? theme.palette.text.secondary });
+    const [, exerciseId] = (active.id as string).split('::');
+    const info = exerciseIndex.get(exerciseId);
+    if (info) setActiveItem({ name: info.name, category: info.category, color: categoryColors[info.category] ?? theme.palette.text.secondary });
   };
 
   const handleDragEnd = ({ active, over }: DragEndEvent) => {
     setActiveItem(null);
     if (!over || active.id === over.id) return;
 
-    const [activeDay, activeCat, activeName] = (active.id as string).split('::');
+    const [activeDay, activeExerciseId] = (active.id as string).split('::');
     const overId = over.id as string;
     const isColDrop = overId.startsWith('col::');
     const overDay = isColDrop ? overId.slice(5) : overId.split('::')[0];
-    const [, overCat, overName] = isColDrop ? [] : overId.split('::');
+    const overExerciseId = isColDrop ? undefined : overId.split('::')[1];
 
     setWeeklySchedule(prev => {
       const sourceArr = [...(prev[activeDay] ?? [])];
-      const fromIdx = sourceArr.findIndex(e => e.category === activeCat && e.name === activeName);
+      const fromIdx = sourceArr.findIndex(e => e.exerciseId === activeExerciseId);
       if (fromIdx === -1) return prev;
 
       if (activeDay === overDay) {
         if (isColDrop) {
           return { ...prev, [activeDay]: arrayMove(sourceArr, fromIdx, sourceArr.length - 1) };
         }
-        const toIdx = sourceArr.findIndex(e => e.category === overCat && e.name === overName);
+        const toIdx = sourceArr.findIndex(e => e.exerciseId === overExerciseId);
         if (toIdx === -1) return prev;
         return { ...prev, [activeDay]: arrayMove(sourceArr, fromIdx, toIdx) };
       }
 
       const [moved] = sourceArr.splice(fromIdx, 1);
       const destArr = [...(prev[overDay] ?? [])];
-      const toIdx = isColDrop ? destArr.length : destArr.findIndex(e => e.category === overCat && e.name === overName);
+      const toIdx = isColDrop ? destArr.length : destArr.findIndex(e => e.exerciseId === overExerciseId);
       destArr.splice(toIdx === -1 ? destArr.length : toIdx, 0, moved);
       return { ...prev, [activeDay]: sourceArr, [overDay]: destArr };
     });
@@ -349,6 +357,7 @@ const WeekView: React.FC<{
             exercises={weeklySchedule[day] ?? []}
             allExercises={allExercises}
             weeklySchedule={weeklySchedule}
+            exerciseIndex={exerciseIndex}
             categoryColors={categoryColors}
             onRemove={(idx) => onRemove(day, idx)}
             onAdd={(exs) => onAdd(day, exs)}
@@ -359,7 +368,8 @@ const WeekView: React.FC<{
         {activeItem && (
           <ExerciseChip
             id="overlay"
-            exercise={activeItem.exercise}
+            name={activeItem.name}
+            category={activeItem.category}
             color={activeItem.color}
             onRemove={() => {}}
             overlay
@@ -374,12 +384,12 @@ const WeekView: React.FC<{
 
 const MobileScheduleRow: React.FC<{
   id: string;
-  exercise: WeeklyScheduleEntry;
+  name: string;
   color: string;
   isLast: boolean;
   onRemove: () => void;
   onMoveClick: (anchor: HTMLElement) => void;
-}> = ({ id, exercise, color, isLast, onRemove, onMoveClick }) => {
+}> = ({ id, name, color, isLast, onRemove, onMoveClick }) => {
   const theme = useTheme();
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
   return (
@@ -397,7 +407,7 @@ const MobileScheduleRow: React.FC<{
         <DragIndicatorIcon fontSize="small" />
       </Box>
       <Box sx={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, backgroundColor: color }} />
-      <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 500 }}>{exercise.name}</Typography>
+      <Typography variant="body2" sx={{ flex: 1, minWidth: 0, fontWeight: 500 }}>{name}</Typography>
       <Tooltip title="Reorder or move to another day">
         <IconButton size="small" onClick={(e) => onMoveClick(e.currentTarget)} aria-label="Reorder or move to another day" sx={{ p: 1.5 }}>
           <MoreVertIcon fontSize="small" />
@@ -411,11 +421,12 @@ const MobileScheduleRow: React.FC<{
 };
 
 const MobileWeekEditor: React.FC<{
-  weeklySchedule: Record<string, WeeklyScheduleEntry[]>;
-  allExercises: Record<string, string[]>;
+  weeklySchedule: WeeklySchedule;
+  allExercises: Record<string, Exercise[]>;
+  exerciseIndex: ExerciseIndex;
   categoryColors: Record<string, string>;
-  setWeeklySchedule: (v: ((prev: Record<string, WeeklyScheduleEntry[]>) => Record<string, WeeklyScheduleEntry[]>)) => void;
-}> = ({ weeklySchedule, allExercises, categoryColors, setWeeklySchedule }) => {
+  setWeeklySchedule: (v: ((prev: WeeklySchedule) => WeeklySchedule)) => void;
+}> = ({ weeklySchedule, allExercises, exerciseIndex, categoryColors, setWeeklySchedule }) => {
   const theme = useTheme();
   const { exerciseGoals, goalSettings } = useAppStore();
   const [dayIdx, setDayIdx] = useState(TODAY_IDX);
@@ -423,62 +434,60 @@ const MobileWeekEditor: React.FC<{
   const [moveMenu, setMoveMenu] = useState<{ anchor: HTMLElement; idx: number } | null>(null);
 
   const day = DAYS[dayIdx];
-  const exercises = weeklySchedule[day] ?? [];
-  const itemIds = exercises.map(ex => `${ex.category}::${ex.name}`);
+  // Filter out stale references before rendering — see plan's "orphan handling at render time".
+  const exercises = (weeklySchedule[day] ?? []).filter(e => exerciseIndex.has(e.exerciseId));
+  const itemIds = exercises.map(ex => ex.exerciseId);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
-  const sortByCategory = (arr: WeeklyScheduleEntry[]) => {
-    const catOrder = Object.keys(allExercises);
-    return [...arr].sort((a, b) => {
-      const catDiff = catOrder.indexOf(a.category) - catOrder.indexOf(b.category);
-      if (catDiff !== 0) return catDiff;
-      const list = allExercises[a.category] ?? [];
-      return list.indexOf(a.name) - list.indexOf(b.name);
+  const handleDragEnd = ({ active, over }: DragEndEvent) => {
+    if (!over || active.id === over.id) return;
+    setWeeklySchedule(prev => {
+      const list = (prev[day] ?? []).filter(e => exerciseIndex.has(e.exerciseId));
+      const fromIdx = list.findIndex(ex => ex.exerciseId === active.id);
+      const toIdx = list.findIndex(ex => ex.exerciseId === over.id);
+      if (fromIdx === -1 || toIdx === -1) return prev;
+      return { ...prev, [day]: arrayMove(list, fromIdx, toIdx) };
     });
   };
 
-  const handleDragEnd = ({ active, over }: DragEndEvent) => {
-    if (!over || active.id === over.id) return;
-    const fromIdx = exercises.findIndex(ex => `${ex.category}::${ex.name}` === active.id);
-    const toIdx = exercises.findIndex(ex => `${ex.category}::${ex.name}` === over.id);
-    if (fromIdx === -1 || toIdx === -1) return;
-    setWeeklySchedule(prev => ({ ...prev, [day]: arrayMove([...(prev[day] ?? [])], fromIdx, toIdx) }));
-  };
-
   const handleRemove = (idx: number) =>
-    setWeeklySchedule(prev => ({ ...prev, [day]: (prev[day] ?? []).filter((_, i) => i !== idx) }));
+    setWeeklySchedule(prev => {
+      const list = (prev[day] ?? []).filter(e => exerciseIndex.has(e.exerciseId));
+      return { ...prev, [day]: list.filter((_, i) => i !== idx) };
+    });
 
   const handleMoveTo = (idx: number, toDay: string) => {
     setWeeklySchedule(prev => {
-      const src = [...(prev[day] ?? [])];
-      const [moved] = src.splice(idx, 1);
-      const dest = sortByCategory([...(prev[toDay] ?? []), moved]);
-      return { ...prev, [day]: src, [toDay]: dest };
+      const src = (prev[day] ?? []).filter(e => exerciseIndex.has(e.exerciseId));
+      const moved = src[idx];
+      if (!moved) return prev;
+      const newSrc = src.filter((_, i) => i !== idx);
+      const dest = sortByExerciseOrder([...(prev[toDay] ?? []), moved], exerciseIndex);
+      return { ...prev, [day]: newSrc, [toDay]: dest };
     });
     setMoveMenu(null);
   };
 
   const handleReorder = (idx: number, delta: -1 | 1) => {
-    setWeeklySchedule(prev => ({ ...prev, [day]: arrayMove([...(prev[day] ?? [])], idx, idx + delta) }));
+    setWeeklySchedule(prev => {
+      const list = (prev[day] ?? []).filter(e => exerciseIndex.has(e.exerciseId));
+      return { ...prev, [day]: arrayMove(list, idx, idx + delta) };
+    });
     setMoveMenu(null);
   };
 
-  const handleAdd = (exs: { category: string; name: string }[]) => {
-    setWeeklySchedule(prev => ({ ...prev, [day]: sortByCategory([...(prev[day] ?? []), ...exs]) }));
+  const handleAdd = (exs: WeeklyScheduleEntry[]) => {
+    setWeeklySchedule(prev => ({ ...prev, [day]: sortByExerciseOrder([...(prev[day] ?? []), ...exs], exerciseIndex) }));
     setPickerAnchor(null);
   };
 
-  const getRemaining = (cat: string, name: string): number | null => {
-    const eg = exerciseGoals[`${cat}-${name}`];
-    if (!goalSettings[cat]?.enabled || eg?.disabled) return null;
-    const required = (eg?.override && !eg?.disabled) ? eg.required : (goalSettings[cat]?.required ?? 3);
-    const scheduled = Object.values(weeklySchedule).flat().filter(e => e.category === cat && e.name === name).length;
-    return Math.max(0, required - scheduled);
-  };
+  const getRemaining = (exerciseId: string): number | null =>
+    getRemainingForExercise(exerciseId, exerciseIndex, weeklySchedule, goalSettings, exerciseGoals);
 
-  const grouped = Object.entries(allExercises).reduce<Record<string, string[]>>((acc, [cat, names]) => {
-    const avail = names.filter(name => !exercises.some(s => s.category === cat && s.name === name));
+  const scheduledIds = new Set(exercises.map(e => e.exerciseId));
+  const grouped = Object.entries(allExercises).reduce<Record<string, Exercise[]>>((acc, [cat, exs]) => {
+    const avail = exs.filter(ex => !scheduledIds.has(ex.id));
     if (avail.length > 0) acc[cat] = avail;
     return acc;
   }, {});
@@ -522,17 +531,20 @@ const MobileWeekEditor: React.FC<{
                 <Typography variant="labelSm" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>Rest day</Typography>
               </Box>
             ) : (
-              exercises.map((ex, i) => (
-                <MobileScheduleRow
-                  key={`${ex.category}::${ex.name}`}
-                  id={`${ex.category}::${ex.name}`}
-                  exercise={ex}
-                  color={categoryColors[ex.category] ?? theme.palette.text.secondary}
-                  isLast={i === exercises.length - 1}
-                  onRemove={() => handleRemove(i)}
-                  onMoveClick={(anchor) => setMoveMenu({ anchor, idx: i })}
-                />
-              ))
+              exercises.map((ex, i) => {
+                const info = exerciseIndex.get(ex.exerciseId)!;
+                return (
+                  <MobileScheduleRow
+                    key={ex.exerciseId}
+                    id={ex.exerciseId}
+                    name={info.name}
+                    color={categoryColors[info.category] ?? theme.palette.text.secondary}
+                    isLast={i === exercises.length - 1}
+                    onRemove={() => handleRemove(i)}
+                    onMoveClick={(anchor) => setMoveMenu({ anchor, idx: i })}
+                  />
+                );
+              })
             )}
           </Paper>
         </SortableContext>
@@ -593,11 +605,11 @@ const MAX_VISIBLE = 2;
 
 const CalendarCell: React.FC<{
   date: Date | null;
-  weeklySchedule: Record<string, WeeklyScheduleEntry[]>;
+  weeklySchedule: WeeklySchedule;
   completions: Record<string, boolean>;
   categoryColors: Record<string, string>;
-  allExercises: Record<string, string[]>;
-}> = ({ date, weeklySchedule, completions, categoryColors, allExercises }) => {
+  exerciseIndex: ExerciseIndex;
+}> = ({ date, weeklySchedule, completions, categoryColors, exerciseIndex }) => {
   const theme = useTheme();
 
   if (!date) return <Box sx={{ flex: 1, minWidth: 0 }} />;
@@ -609,17 +621,14 @@ const CalendarCell: React.FC<{
   const isPast = d < t;
 
   const dayName = DAYS[(date.getDay() + 6) % 7];
-  const catOrder = Object.keys(allExercises);
-  const planned = [...(weeklySchedule[dayName] ?? [])].sort((a, b) => {
-    const catDiff = catOrder.indexOf(a.category) - catOrder.indexOf(b.category);
-    if (catDiff !== 0) return catDiff;
-    const list = allExercises[a.category] ?? [];
-    return list.indexOf(a.name) - list.indexOf(b.name);
-  });
+  const planned = sortByExerciseOrder(
+    (weeklySchedule[dayName] ?? []).filter(e => exerciseIndex.has(e.exerciseId)),
+    exerciseIndex,
+  );
   const isRest = planned.length === 0;
   const dateStr = formatDateKey(date);
 
-  const exDone = (ex: WeeklyScheduleEntry) => !!completions[`${ex.category}-${ex.name}-${dateStr}`];
+  const exDone = (ex: WeeklyScheduleEntry) => isCompletedUtil(completions, ex.exerciseId, dateStr);
 
   const doneCount = isPast ? planned.filter(exDone).length : 0;
   const total = planned.length;
@@ -637,11 +646,12 @@ const CalendarCell: React.FC<{
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: '3px', py: 0.5 }}>
       {planned.map((ex, i) => {
         const done = exDone(ex);
-        const color = categoryColors[ex.category] ?? '#888';
+        const info = exerciseIndex.get(ex.exerciseId)!;
+        const color = categoryColors[info.category] ?? '#888';
         return (
           <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Box sx={{ width: 6, height: 6, borderRadius: '50%', flexShrink: 0, backgroundColor: color }} />
-            <span style={{ textDecoration: done ? 'line-through' : 'none' }}>{ex.name}</span>
+            <span style={{ textDecoration: done ? 'line-through' : 'none' }}>{info.name}</span>
           </Box>
         );
       })}
@@ -685,7 +695,8 @@ const CalendarCell: React.FC<{
           <>
             {visible.map((ex, i) => {
               const done = exDone(ex);
-              const color = categoryColors[ex.category] ?? theme.palette.text.secondary;
+              const info = exerciseIndex.get(ex.exerciseId)!;
+              const color = categoryColors[info.category] ?? theme.palette.text.secondary;
               return (
                 <Box key={i} sx={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0 }}>
                   <Box sx={{ width: 4, height: 4, borderRadius: '50%', flexShrink: 0, backgroundColor: alpha(color, 0.9) }} />
@@ -696,7 +707,7 @@ const CalendarCell: React.FC<{
                     color: 'text.primary',
                     textDecoration: done ? 'line-through' : 'none',
                   }}>
-                    {ex.name}
+                    {info.name}
                   </Typography>
                 </Box>
               );
@@ -719,13 +730,13 @@ const CalendarCell: React.FC<{
 };
 
 const MonthView: React.FC<{
-  weeklySchedule: Record<string, WeeklyScheduleEntry[]>;
+  weeklySchedule: WeeklySchedule;
   completions: Record<string, boolean>;
   categoryColors: Record<string, string>;
-  allExercises: Record<string, string[]>;
+  exerciseIndex: ExerciseIndex;
   year: number;
   month: number;
-}> = ({ weeklySchedule, completions, categoryColors, allExercises, year, month }) => {
+}> = ({ weeklySchedule, completions, categoryColors, exerciseIndex, year, month }) => {
   const theme = useTheme();
   const weeks = buildCalendarGrid(year, month);
 
@@ -742,7 +753,7 @@ const MonthView: React.FC<{
         {weeks.map((week, wi) => (
           <Box key={wi} sx={{ display: 'flex', gap: 0.75 }}>
             {week.map((date, di) => (
-              <CalendarCell key={di} date={date} weeklySchedule={weeklySchedule} completions={completions} categoryColors={categoryColors} allExercises={allExercises} />
+              <CalendarCell key={di} date={date} weeklySchedule={weeklySchedule} completions={completions} categoryColors={categoryColors} exerciseIndex={exerciseIndex} />
             ))}
           </Box>
         ))}
@@ -778,43 +789,36 @@ const ScheduleView: React.FC<{ selectedMonth: number; selectedYear: number }> = 
     [exercises],
   );
 
+  const exerciseIndex = useMemo(() => buildExerciseIndex(exercises), [exercises]);
+
   const scheduleProgress = useMemo(
     () => Object.fromEntries(
-      Object.entries(exercises).map(([cat, names]) => {
+      Object.entries(exercises).map(([cat, exs]) => {
         if (!goalSettings[cat]?.enabled) return [cat, null];
-        const sessions = Object.values(weeklySchedule).flat().filter(e => e.category === cat).length;
-        const goal = names.reduce((sum, name) => {
-          const eg = exerciseGoals[`${cat}-${name}`];
+        const sessions = Object.values(weeklySchedule).flat().filter(e => exerciseIndex.get(e.exerciseId)?.category === cat).length;
+        const goal = exs.reduce((sum, ex) => {
+          const eg = exerciseGoals[ex.id];
           if (eg?.disabled) return sum;
           return sum + (eg?.override ? eg.required : goalSettings[cat].required);
         }, 0);
         return [cat, { sessions, goal }];
       })
     ),
-    [exercises, weeklySchedule, goalSettings, exerciseGoals],
+    [exercises, weeklySchedule, goalSettings, exerciseGoals, exerciseIndex],
   );
 
   const handleRemove = (day: string, idx: number) =>
     setWeeklySchedule(prev => ({ ...prev, [day]: (prev[day] ?? []).filter((_, i) => i !== idx) }));
 
-  const catOrder = Object.keys(exercises);
-  const sortByCategory = (arr: WeeklyScheduleEntry[]) =>
-    [...arr].sort((a, b) => {
-      const catDiff = catOrder.indexOf(a.category) - catOrder.indexOf(b.category);
-      if (catDiff !== 0) return catDiff;
-      const list = exercises[a.category] ?? [];
-      return list.indexOf(a.name) - list.indexOf(b.name);
-    });
-
   useEffect(() => {
     setWeeklySchedule(prev =>
-      Object.fromEntries(Object.entries(prev).map(([day, exs]) => [day, sortByCategory(exs)]))
+      Object.fromEntries(Object.entries(prev).map(([day, exs]) => [day, sortByExerciseOrder(exs, exerciseIndex)]))
     );
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleAdd = (day: string, exs: WeeklyScheduleEntry[]) =>
-    setWeeklySchedule(prev => ({ ...prev, [day]: [...(prev[day] ?? []), ...sortByCategory(exs)] }));
+    setWeeklySchedule(prev => ({ ...prev, [day]: [...(prev[day] ?? []), ...sortByExerciseOrder(exs, exerciseIndex)] }));
 
   return (
     <Box sx={isMobile ? {} : { borderRadius: 2, boxShadow: 2, px: { xs: 1.5, sm: 3 }, pt: 2, pb: { xs: 2, sm: 3 }, backgroundColor: 'background.paper' }}>
@@ -832,11 +836,11 @@ const ScheduleView: React.FC<{ selectedMonth: number; selectedYear: number }> = 
       )}
 
       {isMobile ? (
-        <MobileWeekEditor weeklySchedule={weeklySchedule} allExercises={exercises} categoryColors={categoryColors} setWeeklySchedule={setWeeklySchedule} />
+        <MobileWeekEditor weeklySchedule={weeklySchedule} allExercises={exercises} exerciseIndex={exerciseIndex} categoryColors={categoryColors} setWeeklySchedule={setWeeklySchedule} />
       ) : isMonth ? (
-        <MonthView weeklySchedule={weeklySchedule} completions={completions} categoryColors={categoryColors} allExercises={exercises} year={selectedYear} month={selectedMonth} />
+        <MonthView weeklySchedule={weeklySchedule} completions={completions} categoryColors={categoryColors} exerciseIndex={exerciseIndex} year={selectedYear} month={selectedMonth} />
       ) : (
-        <WeekView weeklySchedule={weeklySchedule} allExercises={exercises} categoryColors={categoryColors} onRemove={handleRemove} onAdd={handleAdd} setWeeklySchedule={setWeeklySchedule} />
+        <WeekView weeklySchedule={weeklySchedule} allExercises={exercises} exerciseIndex={exerciseIndex} categoryColors={categoryColors} onRemove={handleRemove} onAdd={handleAdd} setWeeklySchedule={setWeeklySchedule} />
       )}
 
       <Box sx={{ display: 'flex', gap: 2, mt: 2, flexWrap: 'wrap', justifyContent: 'center' }}>
