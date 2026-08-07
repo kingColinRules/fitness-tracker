@@ -202,7 +202,7 @@ const MobileDayView: React.FC = () => {
         </Box>
       ))}
 
-      <LogLegend />
+      <LogLegend isMobile />
     </Box>
   );
 };

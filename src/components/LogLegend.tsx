@@ -3,14 +3,18 @@ import Box from '@mui/material/Box';
 import Typography from '@mui/material/Typography';
 import { alpha, useTheme } from '@mui/material/styles';
 
-const LogLegend: React.FC = () => {
+interface LogLegendProps {
+  isMobile?: boolean;
+}
+
+const LogLegend: React.FC<LogLegendProps> = ({ isMobile = false }) => {
   const theme = useTheme();
 
   const items = [
     { label: 'Completed', color: theme.palette.success.main },
     { label: 'Scheduled', color: alpha(theme.palette.primary.main, 0.1) },
     { label: 'Not completed', color: theme.palette.action.hover },
-    { label: 'Upcoming', color: theme.palette.action.disabledBackground },
+    ...(isMobile ? [] : [{ label: 'Upcoming', color: theme.palette.action.disabledBackground }]),
   ];
 
   return (
